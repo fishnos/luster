@@ -11,7 +11,7 @@ import { ModeCritic } from "@/ui/ModeCritic";
 import { ModeSegment } from "@/ui/ModeSegment";
 import { StatsPanel } from "@/ui/StatsPanel";
 import { ConnectBanner } from "@/ui/ConnectBanner";
-import { EditorHint } from "@/ui/EditorHint";
+import { EditorHint, runDocsDiagnostic } from "@/ui/EditorHint";
 import { InlineSettings } from "@/ui/InlineSettings";
 import { useOverlayState } from "@/ui/useOverlayState";
 import type { OverlayController, OverlayState } from "@/ui/state";
@@ -116,6 +116,15 @@ function Header({
   const onPointerDown = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
       if (event.button !== 0) return;
+      const eventTarget = event.target as Element | null;
+      if (
+        eventTarget &&
+        eventTarget.closest(
+          'button, a, input, select, textarea, [role="button"]',
+        )
+      ) {
+        return;
+      }
       const target = event.currentTarget;
       if (typeof target.setPointerCapture === "function") {
         target.setPointerCapture(event.pointerId);
@@ -183,6 +192,15 @@ function Header({
           {wordCount.toLocaleString("en-US")}{" "}
           <span className="text-luster-faint">words</span>
         </span>
+        {state.hostKind === "google-docs" && (
+          <Button
+            variant="icon"
+            aria-label="Diagnose Docs bridge"
+            onClick={() => void runDocsDiagnostic()}
+          >
+            <Icon name="sparkle" size={14} />
+          </Button>
+        )}
         <Button
           variant="icon"
           aria-label={

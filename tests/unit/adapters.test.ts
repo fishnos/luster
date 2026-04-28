@@ -107,43 +107,107 @@ describe("notionAdapter.attach", () => {
   });
 });
 
-describe("googleDocsAdapter.attach", () => {
-  it("reads paragraph text from kix-paragraphrenderer blocks", () => {
-    document.body.innerHTML = `
-      <div class="kix-page-content-wrap">
-        <div class="kix-paragraphrenderer">First paragraph.</div>
-        <div class="kix-paragraphrenderer">Second paragraph here.</div>
-      </div>
-    `;
+describe("googleDocsAdapter.attach (canvas bridge client)", () => {
+  it("starts with empty text until the bridge posts a snapshot", () => {
     const handle = googleDocsAdapter.attach(document);
-    expect(handle.readText()).toBe(
-      "First paragraph.\n\nSecond paragraph here.",
-    );
+    expect(handle.readText()).toBe("");
     expect(handle.caretRect()).toBeNull();
     handle.detach();
   });
 
-  it("commits when a new paragraph block is added", async () => {
-    document.body.innerHTML = `
-      <div class="kix-page-content-wrap">
-        <div class="kix-paragraphrenderer">First sentence here.</div>
-      </div>
-    `;
+  it("updates text when the main-world bridge posts a text message", async () => {
+    const handle = googleDocsAdapter.attach(document);
+    const seenText: string[] = [];
+    handle.onTextChange((text) => seenText.push(text));
+
+    window.postMessage(
+      {
+        channel: "luster-kix",
+        type: "text",
+        fullText: "First paragraph here.",
+        paragraphs: ["First paragraph here."],
+        glyphCount: 21,
+        generation: 1,
+      },
+      "*",
+    );
+
+    await flushDebounceAndObserver(40);
+
+    expect(handle.readText()).toBe("First paragraph here.");
+    expect(seenText).toContain("First paragraph here.");
+    handle.detach();
+  });
+
+  it("commits a sentence when a new sentence starts in the next bridge snapshot", async () => {
     const handle = googleDocsAdapter.attach(document);
     const commits: CommitDelta[] = [];
     handle.onCommit((delta) => commits.push(delta));
 
-    const wrap = document.querySelector(".kix-page-content-wrap")!;
-    const newBlock = document.createElement("div");
-    newBlock.className = "kix-paragraphrenderer";
-    newBlock.textContent = "Second.";
-    wrap.appendChild(newBlock);
+    window.postMessage(
+      {
+        channel: "luster-kix",
+        type: "text",
+        fullText: "First.",
+        paragraphs: ["First."],
+        glyphCount: 6,
+        generation: 1,
+      },
+      "*",
+    );
+    await flushDebounceAndObserver(40);
 
-    await flushDebounceAndObserver(700);
+    window.postMessage(
+      {
+        channel: "luster-kix",
+        type: "text",
+        fullText: "First. Second",
+        paragraphs: ["First. Second"],
+        glyphCount: 13,
+        generation: 2,
+      },
+      "*",
+    );
+    await flushDebounceAndObserver(40);
 
-    const lastCommit = commits[commits.length - 1];
-    expect(lastCommit).toBeDefined();
-    expect(lastCommit!.reason).toBe("paragraph-break");
+    expect(commits).toHaveLength(1);
+    expect(commits[0]!.sentence).toBe("First.");
     handle.detach();
+  });
+
+  it("ignores foreign window messages", async () => {
+    const handle = googleDocsAdapter.attach(document);
+    const seenText: string[] = [];
+    handle.onTextChange((text) => seenText.push(text));
+
+    window.postMessage(
+      { channel: "other-extension", type: "text", fullText: "ignored" },
+      "*",
+    );
+    await flushDebounceAndObserver(20);
+
+    expect(handle.readText()).toBe("");
+    expect(seenText).toEqual([]);
+    handle.detach();
+  });
+
+  it("detach stops listening for bridge messages", async () => {
+    const handle = googleDocsAdapter.attach(document);
+    handle.detach();
+
+    window.postMessage(
+      {
+        channel: "luster-kix",
+        type: "text",
+        fullText: "After detach",
+        paragraphs: ["After detach"],
+        glyphCount: 12,
+        generation: 1,
+      },
+      "*",
+    );
+    await flushDebounceAndObserver(20);
+
+    expect(handle.readText()).toBe("");
   });
 });

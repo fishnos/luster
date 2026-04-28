@@ -1,7 +1,7 @@
 import type { HostKind } from "@/ui/state";
 import { Button } from "@/ui/components/Button";
 import { Icon } from "@/ui/components/Icon";
-import { diagnoseGoogleDocs } from "@/adapters/google-docs";
+import { diagnoseGoogleDocs, probeBridge } from "@/adapters/google-docs";
 
 export interface EditorHintProps {
   hostKind: HostKind;
@@ -12,61 +12,6 @@ export function EditorHint({ hostKind }: EditorHintProps) {
 
   function reload(): void {
     window.location.reload();
-  }
-
-  function runDiagnostic(): void {
-    const result = diagnoseGoogleDocs();
-    // eslint-disable-next-line no-console
-    console.log("[Luster] Google Docs diagnostic:", result);
-
-    const matchedSelectors = Object.entries(result.selectorCounts)
-      .filter(([, count]) => count > 0)
-      .map(([selector, count]) => `  ${selector} → ${count}`)
-      .join("\n");
-
-    const textboxLines = result.textboxes
-      .map(
-        (entry, index) =>
-          `  [${index}] aria="${entry.aria}" multiline=${entry.multiline} editable=${entry.contentEditable} textLen=${entry.textLength}` +
-          (entry.sample ? `\n      sample: ${entry.sample}` : ""),
-      )
-      .join("\n");
-
-    const regionLines = result.regions
-      .map(
-        (entry, index) =>
-          `  [${index}] aria="${entry.aria}" textLen=${entry.textLength}`,
-      )
-      .join("\n");
-
-    const iframeLines = result.iframes
-      .map(
-        (frame, index) =>
-          `  [${index}] src=${frame.src || "(blank)"} sameOrigin=${frame.sameOrigin}`,
-      )
-      .join("\n");
-
-    alert(
-      [
-        "Luster diagnostic — Google Docs",
-        "",
-        "Matched selectors:",
-        matchedSelectors || "  (none)",
-        "",
-        `[role="textbox"] elements (${result.textboxes.length}):`,
-        textboxLines || "  (none)",
-        "",
-        `[role="region"] elements with aria-label (${result.regions.length}):`,
-        regionLines || "  (none)",
-        "",
-        `contenteditable=true elements: ${result.contenteditables}`,
-        `kix-/docs-* class tokens: ${result.kixClasses.length}`,
-        `iframes (${result.iframes.length}):`,
-        iframeLines || "  (none)",
-        "",
-        "Full diagnostic logged to DevTools console.",
-      ].join("\n"),
-    );
   }
 
   return (
@@ -96,7 +41,13 @@ export function EditorHint({ hostKind }: EditorHintProps) {
             <Button variant="primary" size="sm" onClick={reload}>
               Reload tab
             </Button>
-            <Button variant="outline" size="sm" onClick={runDiagnostic}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                void runDocsDiagnostic();
+              }}
+            >
               Diagnose
             </Button>
           </>
@@ -116,6 +67,122 @@ export function EditorHint({ hostKind }: EditorHintProps) {
   );
 }
 
+export async function runDocsDiagnostic(): Promise<void> {
+  const probe = await probeBridge(400);
+  const dom = diagnoseGoogleDocs();
+  // eslint-disable-next-line no-console
+  console.log("[Luster] Google Docs diagnostic:", { probe, dom });
+
+  if (!probe) {
+    alert(
+      [
+        "Luster diagnostic — bridge NOT responding",
+        "",
+        "The main-world canvas bridge isn't installed (or it crashed).",
+        "Most likely causes:",
+        "  · The extension hasn't been reloaded since the last update.",
+        "  · A CSP / extension-conflict blocked the document_start script.",
+        "  · You're on a build of Chrome that doesn't honor world: 'MAIN'.",
+        "",
+        "Reload the tab and try again. If it still fails, open the",
+        'Service Worker console at chrome://extensions/ → Luster → "service worker"',
+        "and check for errors.",
+        "",
+        `DOM-level signals: kix/docs classes=${dom.kixClasses.length}, contenteditables=${dom.contenteditables}.`,
+      ].join("\n"),
+    );
+    return;
+  }
+
+  const conclusion = describeProbe(probe);
+
+  const canvasLines =
+    probe.candidateCanvases.length === 0
+      ? "  (no canvases received fillText calls yet — type into the doc and re-run)"
+      : probe.candidateCanvases
+          .map((canvas, index) =>
+            [
+              `  [${index}] ${canvas.width}×${canvas.height} hits=${canvas.fillTextHits} editor=${canvas.isEditor ? "yes" : "no"}`,
+              `      class:    ${canvas.classChain || "(none)"}`,
+              `      ancestors: ${canvas.ancestorClasses}`,
+            ].join("\n"),
+          )
+          .join("\n");
+
+  const sampleLine = probe.lastReconstructedSample
+    ? `  sample: "${probe.lastReconstructedSample}"`
+    : "  sample: (empty)";
+
+  alert(
+    [
+      "Luster diagnostic — canvas bridge",
+      "",
+      conclusion,
+      "",
+      "Latest reconstruction:",
+      `  ${probe.lastReconstructedTextLength} chars / ${probe.lastReconstructedParagraphCount} paragraphs`,
+      sampleLine,
+      "",
+      "Counters:",
+      `  fillText calls       ${probe.fillTextCalls}`,
+      `  strokeText calls     ${probe.strokeTextCalls}`,
+      `  clearRect calls      ${probe.clearRectCalls}`,
+      `  total canvases       ${probe.totalCanvases}`,
+      `  tracked editor       ${probe.trackedEditorCanvases}`,
+      `  glyphs in buffer     ${probe.totalGlyphs}`,
+      `  reconstructed chars  ${probe.lastReconstructedTextLength}`,
+      `  reconstructed paras  ${probe.lastReconstructedParagraphCount}`,
+      `  bridge state         ${probe.bridgeState}`,
+      `  KX_kixApp present    ${probe.hasKixApp ? "yes" : "no"}`,
+      `  .kix-cursor present  ${probe.caretSelectorPresent ? "yes" : "no"}`,
+      "",
+      `Candidate canvases (${probe.candidateCanvases.length}):`,
+      canvasLines,
+      "",
+      `DOM signals: kix/docs class tokens=${dom.kixClasses.length}, contenteditables=${dom.contenteditables}`,
+      "",
+      "Full diagnostic logged to DevTools console.",
+    ].join("\n"),
+  );
+}
+
+function describeProbe(
+  probe: NonNullable<Awaited<ReturnType<typeof probeBridge>>>,
+): string {
+  if (probe.fillTextCalls === 0) {
+    return [
+      "❌ Bridge installed but caught zero fillText calls.",
+      "   → Either Docs hasn't painted yet, or the canvas world hooks aren't intercepting.",
+      "   Try typing a character in the doc and run Diagnose again.",
+    ].join("\n");
+  }
+  if (probe.trackedEditorCanvases === 0) {
+    return [
+      "⚠️ fillText is firing but no editor canvas was matched.",
+      "   → The .kix-rotatingtilemanager-content selector isn't finding the editor.",
+      "   Docs may be using a new wrapper class. Paste this dialog back to me.",
+    ].join("\n");
+  }
+  if (probe.totalGlyphs === 0) {
+    return [
+      "⚠️ Editor canvases tracked but glyph buffer is empty.",
+      "   → clearRect is wiping the buffer faster than fillText fills it.",
+      "   Type a character and run Diagnose right after.",
+    ].join("\n");
+  }
+  if (probe.lastReconstructedTextLength === 0) {
+    return [
+      "⚠️ Glyphs captured but reconstruction produced empty text.",
+      "   → Probably a glyph-clustering bug. Paste this dialog back to me.",
+    ].join("\n");
+  }
+  return [
+    "✅ Bridge is alive and reading text.",
+    `   ${probe.lastReconstructedTextLength} chars across ${probe.lastReconstructedParagraphCount} paragraphs.`,
+    "   If the panel still shows 0 words, the postMessage handoff to the panel is broken — that's a different bug; tell me.",
+  ].join("\n");
+}
+
 interface Hint {
   title: string;
   body: string;
@@ -126,19 +193,15 @@ interface Hint {
 
 const HINTS: Record<HostKind, Hint> = {
   "google-docs": {
-    title: "Google Docs (Editor 2.0) is hostile to extensions",
-    body: 'Docs renders to canvas and only mirrors text into the DOM when Chrome itself is in accessibility mode. Toggling "screen reader support" inside Docs alone is not enough.',
+    title: "Reading Google Docs via canvas bridge",
+    body: "Luster intercepts Docs' canvas drawing to read your text. If the bridge can't capture anything, click Diagnose to see exactly what's happening.",
     steps: [
-      "On macOS: turn on VoiceOver (Cmd+F5), reload this tab, then turn VoiceOver off again — the DOM mirror stays.",
-      'Or visit chrome://accessibility/ → check "Native accessibility API support" → toggle this tab\'s row on, then reload.',
-      "After reloading, click into the document so it gets focus.",
+      "Click into the document so it has focus.",
+      "Type a character so the canvas paints.",
+      "Click Diagnose to see the bridge counters.",
     ],
     fallback:
-      "Honest take: Notion, Substack, Medium, and Ghost work without any of this. Google Docs may stop working again whenever Google ships a new editor version.",
-    link: {
-      label: "Background on Docs accessibility",
-      href: "https://support.google.com/docs/answer/6282736",
-    },
+      "If Diagnose reports the bridge is silent, reload the tab. The main-world script needs to attach before Docs paints.",
   },
   notion: {
     title: "Open a Notion page with text",
@@ -150,6 +213,6 @@ const HINTS: Record<HostKind, Hint> = {
   },
   unknown: {
     title: "Open a supported editor",
-    body: "Luster runs reliably inside Notion, Substack, Medium, and Ghost editors. Google Docs requires accessibility mode in Chrome to read text.",
+    body: "Luster runs reliably inside Notion, Substack, Medium, and Ghost editors. Google Docs requires its canvas bridge — open a Doc to test it.",
   },
 };

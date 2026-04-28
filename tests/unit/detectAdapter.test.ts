@@ -6,14 +6,14 @@ afterEach(() => {
 });
 
 describe("detectAdapter", () => {
-  it("returns the Google Docs adapter on a doc URL with kix DOM", () => {
-    document.body.innerHTML = `<div class="kix-page-content-wrap"><div class="kix-paragraphrenderer">Hello</div></div>`;
+  it("returns the Google Docs adapter when the canvas tile manager is present", () => {
+    document.body.innerHTML = `<div class="kix-rotatingtilemanager-content"><canvas></canvas></div>`;
     const url = new URL("https://docs.google.com/document/d/abc123/edit");
     const adapter = detectAdapter(url, document);
     expect(adapter?.id).toBe("google-docs");
   });
 
-  it("returns null on Google Docs without the kix DOM (e.g. mobile or list view)", () => {
+  it("returns null on Google Docs before the canvas tile manager has rendered", () => {
     const url = new URL("https://docs.google.com/document/d/abc123/edit");
     const adapter = detectAdapter(url, document);
     expect(adapter).toBeNull();
