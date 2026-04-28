@@ -9,7 +9,6 @@
   }
 }
 
-/* Shadow-DOM-safe defaults — avoid leaking into host page. */
 .luster-root {
   font-family:
     ui-sans-serif,
