@@ -79,10 +79,11 @@ export function createRequestHandler(
           return ok();
 
         case "settings/set-active-provider":
-          await services.keyVault.setActiveProvider(
-            request.payload.mode,
-            request.payload.provider,
-          );
+          await services.keyVault.setActiveProvider(request.payload.provider);
+          return ok();
+
+        case "settings/set-default-mode":
+          await services.keyVault.setDefaultMode(request.payload.mode);
           return ok();
 
         case "history/set-enabled":

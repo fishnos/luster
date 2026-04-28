@@ -7,7 +7,7 @@ afterEach(() => {
 
 describe("detectAdapter", () => {
   it("returns the Google Docs adapter on a doc URL with kix DOM", () => {
-    document.body.innerHTML = `<div class="kix-page-content-wrap"></div>`;
+    document.body.innerHTML = `<div class="kix-page-content-wrap"><div class="kix-paragraphrenderer">Hello</div></div>`;
     const url = new URL("https://docs.google.com/document/d/abc123/edit");
     const adapter = detectAdapter(url, document);
     expect(adapter?.id).toBe("google-docs");

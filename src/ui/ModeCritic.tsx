@@ -1,5 +1,4 @@
 import type { CriticIssue } from "@/core/types";
-import { Card, CardBody, CardHeader } from "@/ui/components/Card";
 import { SeverityBadge } from "@/ui/components/SeverityBadge";
 import { ModeStatusBanner } from "@/ui/ModeStatusBanner";
 import type { ModeOverlayInfo } from "@/ui/state";
@@ -18,14 +17,12 @@ export interface ModeCriticProps {
 
 export function ModeCritic({ info, sentence }: ModeCriticProps) {
   return (
-    <Card>
-      <CardHeader>
-        <span>Critic</span>
-        {info.provider && (
-          <span className="text-luster-muted">{info.provider}</span>
-        )}
-      </CardHeader>
-      <CardBody className="space-y-3 text-xs">
+    <div className="rounded-md border border-luster-border bg-luster-card">
+      <div className="flex items-center justify-between border-b border-luster-border px-3 py-2 text-[10px] uppercase tracking-[0.14em] text-luster-faint">
+        <span>Critic · structure &amp; connection</span>
+        {info.provider && <span>{info.provider}</span>}
+      </div>
+      <div className="px-3 py-3 text-[13px]">
         <ModeStatusBanner
           info={info}
           idleText="Finish a sentence to be critiqued."
@@ -33,8 +30,8 @@ export function ModeCritic({ info, sentence }: ModeCriticProps) {
         {info.status === "ok" && info.output?.mode === "critic" && (
           <CriticBody issues={info.output.result.issues} sentence={sentence} />
         )}
-      </CardBody>
-    </Card>
+      </div>
+    </div>
   );
 }
 
@@ -47,7 +44,8 @@ function CriticBody({
 }) {
   if (issues.length === 0) {
     return (
-      <div className="text-luster-ok">
+      <div className="luster-cross flex items-center gap-2 text-[13px] text-luster-ok">
+        <span className="inline-block h-1.5 w-1.5 rounded-full bg-luster-ok" />
         No issues spotted in the latest sentence.
       </div>
     );
@@ -58,16 +56,16 @@ function CriticBody({
       SEVERITY_ORDER.indexOf(right.severity),
   );
   return (
-    <ul className="space-y-2.5">
+    <ul className="luster-cross space-y-3">
       {sortedIssues.map((issue, index) => (
-        <li key={index} className="space-y-1">
+        <li key={index} className="space-y-1.5">
           <div className="flex items-center gap-2">
             <SeverityBadge severity={issue.severity} />
-            <span className="text-luster-ink">{issue.label}</span>
+            <span className="text-[13px] text-luster-ink">{issue.label}</span>
           </div>
           {sentence && <SpanQuote sentence={sentence} issue={issue} />}
           {issue.suggestion && (
-            <div className="text-luster-muted leading-snug">
+            <div className="luster-serif text-[13px] text-luster-muted leading-snug">
               → {issue.suggestion}
             </div>
           )}
@@ -88,9 +86,9 @@ function SpanQuote({
   const inside = sentence.slice(issue.span.start, issue.span.end);
   const after = sentence.slice(issue.span.end);
   return (
-    <div className="rounded bg-luster-panel2 px-2 py-1 font-serif text-[12px] leading-snug">
+    <div className="rounded-md border border-luster-border bg-luster-surface px-2.5 py-2 luster-serif text-[13px] leading-snug">
       <span className="text-luster-muted">{before}</span>
-      <span className="bg-luster-warn/25 underline decoration-luster-warn decoration-wavy underline-offset-2 text-luster-ink">
+      <span className="bg-[#fdecd7] underline decoration-luster-warn decoration-wavy decoration-2 underline-offset-2 text-luster-ink">
         {inside}
       </span>
       <span className="text-luster-muted">{after}</span>

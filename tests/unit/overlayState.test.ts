@@ -20,11 +20,45 @@ describe("createOverlayController", () => {
     const controller = createOverlayController();
     const state = controller.getState();
     expect(state.activeMode).toBe("reading");
+    expect(state.view).toBe("main");
+    expect(state.minimized).toBe(false);
+    expect(state.connectState).toBe("unknown");
+    expect(state.autoLaunch).toBe(true);
     expect(state.modes.reading.status).toBe("idle");
     expect(state.modes.interrogation.status).toBe("idle");
     expect(state.modes.critic.status).toBe("idle");
     expect(state.stats).toBeNull();
     expect(state.criticSentence).toBeNull();
+  });
+
+  it("toggles between main and settings views", () => {
+    const controller = createOverlayController();
+    controller.setView("settings");
+    expect(controller.getState().view).toBe("settings");
+    controller.setView("main");
+    expect(controller.getState().view).toBe("main");
+  });
+
+  it("minimizes and restores the panel", () => {
+    const controller = createOverlayController();
+    controller.setMinimized(true);
+    expect(controller.getState().minimized).toBe(true);
+    controller.setMinimized(false);
+    expect(controller.getState().minimized).toBe(false);
+  });
+
+  it("records the connection state with the connected provider", () => {
+    const controller = createOverlayController();
+    controller.setConnectState("connected", "gemini");
+    const state = controller.getState();
+    expect(state.connectState).toBe("connected");
+    expect(state.connectedProvider).toBe("gemini");
+  });
+
+  it("toggles the autoLaunch preference", () => {
+    const controller = createOverlayController();
+    controller.setAutoLaunch(false);
+    expect(controller.getState().autoLaunch).toBe(false);
   });
 
   it("changes the active mode and notifies subscribers", () => {

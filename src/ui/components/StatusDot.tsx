@@ -2,8 +2,8 @@ import { cn } from "@/ui/cn";
 import type { ModeStatus } from "@/ui/state";
 
 const STATUS_STYLES: Record<ModeStatus, string> = {
-  idle: "bg-luster-muted/40",
-  pending: "bg-luster-accent animate-pulse",
+  idle: "bg-luster-faint",
+  pending: "bg-luster-accent luster-pulse",
   ok: "bg-luster-ok",
   error: "bg-luster-err",
   "rate-limited": "bg-luster-warn",
@@ -27,7 +27,10 @@ export function StatusDot({ status }: StatusDotProps) {
       role="status"
       aria-label={STATUS_LABEL[status]}
       data-status={status}
-      className={cn("inline-block h-2 w-2 rounded-full", STATUS_STYLES[status])}
+      className={cn(
+        "inline-block h-1.5 w-1.5 rounded-full",
+        STATUS_STYLES[status],
+      )}
     />
   );
 }

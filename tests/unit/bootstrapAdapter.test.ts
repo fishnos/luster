@@ -49,6 +49,8 @@ function createFakeAdapter(): { adapter: Adapter; handle: FakeAdapterHandle } {
 
   const adapter: Adapter = {
     id: "prosemirror",
+    matchUrl: () => true,
+    matchEditor: () => true,
     match: () => true,
     attach: () => {
       attached = true;

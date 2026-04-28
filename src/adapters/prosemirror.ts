@@ -19,13 +19,22 @@ const URL_PATTERNS: ((url: URL) => boolean)[] = [
   (url) => url.host.endsWith(".ghost.io") && /\/ghost\//.test(url.pathname),
 ];
 
+function matchUrl(url: URL): boolean {
+  return URL_PATTERNS.some((pattern) => pattern(url));
+}
+
+function matchEditor(hostDocument: Document): boolean {
+  return hostDocument.querySelector(".ProseMirror") !== null;
+}
+
 export const proseMirrorAdapter: Adapter = {
   id: "prosemirror",
 
+  matchUrl,
+  matchEditor,
+
   match(url, hostDocument) {
-    const urlMatches = URL_PATTERNS.some((pattern) => pattern(url));
-    if (!urlMatches) return false;
-    return hostDocument.querySelector(".ProseMirror") !== null;
+    return matchUrl(url) && matchEditor(hostDocument);
   },
 
   attach(hostDocument): AdapterHandle {

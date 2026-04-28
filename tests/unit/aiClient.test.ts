@@ -32,6 +32,7 @@ describe("createAiClient.runForMode", () => {
     const storage = createInMemoryStorage();
     const keyVault = createKeyVault(storage);
     await keyVault.setApiKey("anthropic", "sk-ant");
+    await keyVault.setActiveProvider("anthropic");
 
     const rateLimiter = createRateLimiter({ defaultCallsPerMinute: 10 });
     const providers = makeRegistry();
@@ -50,7 +51,7 @@ describe("createAiClient.runForMode", () => {
     expect(providers.anthropic.call).toHaveBeenCalledTimes(1);
   });
 
-  it("returns no-key when the active provider has no API key", async () => {
+  it("returns no-key when the default provider has no API key", async () => {
     const keyVault = createKeyVault(createInMemoryStorage());
     const rateLimiter = createRateLimiter({ defaultCallsPerMinute: 10 });
     const client = createAiClient({
@@ -68,13 +69,14 @@ describe("createAiClient.runForMode", () => {
     expect(result).toMatchObject({
       ok: false,
       reason: "no-key",
-      provider: "anthropic",
+      provider: "gemini",
     });
   });
 
   it("returns rate-limited with a retry hint when the bucket is full", async () => {
     const keyVault = createKeyVault(createInMemoryStorage());
     await keyVault.setApiKey("anthropic", "sk-ant");
+    await keyVault.setActiveProvider("anthropic");
     const rateLimiter = createRateLimiter({ defaultCallsPerMinute: 1 });
     const providers = makeRegistry();
     const client = createAiClient({ keyVault, rateLimiter, providers });
@@ -98,6 +100,7 @@ describe("createAiClient.runForMode", () => {
   it("reports provider-error when the provider call throws", async () => {
     const keyVault = createKeyVault(createInMemoryStorage());
     await keyVault.setApiKey("anthropic", "sk-ant");
+    await keyVault.setActiveProvider("anthropic");
     const rateLimiter = createRateLimiter({ defaultCallsPerMinute: 10 });
     const providers = makeRegistry();
     providers.anthropic.call = vi.fn(async () => {
@@ -117,24 +120,31 @@ describe("createAiClient.runForMode", () => {
     });
   });
 
-  it("honors a per-mode active provider override", async () => {
+  it("uses the globally configured active provider for every mode", async () => {
     const keyVault = createKeyVault(createInMemoryStorage());
-    await keyVault.setApiKey("gemini", "gem-key");
-    await keyVault.setActiveProvider("critic", "gemini");
+    await keyVault.setApiKey("anthropic", "ant-key");
+    await keyVault.setActiveProvider("anthropic");
     const rateLimiter = createRateLimiter({ defaultCallsPerMinute: 10 });
     const providers = makeRegistry();
     const client = createAiClient({ keyVault, rateLimiter, providers });
 
-    const result = await client.runForMode({
+    const reading = await client.runForMode({
+      mode: "reading",
+      systemPrompt: "s",
+      userPrompt: "u",
+    });
+    const critic = await client.runForMode({
       mode: "critic",
       systemPrompt: "s",
       userPrompt: "u",
     });
-    expect(result.ok).toBe(true);
-    if (!result.ok) throw new Error("expected ok");
-    expect(result.provider).toBe("gemini");
-    expect(providers.gemini.call).toHaveBeenCalledTimes(1);
-    expect(providers.openai.call).not.toHaveBeenCalled();
+    expect(reading.ok).toBe(true);
+    expect(critic.ok).toBe(true);
+    if (!reading.ok || !critic.ok) throw new Error("expected ok");
+    expect(reading.provider).toBe("anthropic");
+    expect(critic.provider).toBe("anthropic");
+    expect(providers.anthropic.call).toHaveBeenCalledTimes(2);
+    expect(providers.gemini.call).not.toHaveBeenCalled();
   });
 
   it("forwards validateKey to the named provider with its configured model", async () => {

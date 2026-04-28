@@ -1,12 +1,12 @@
 import { createRoot, type Root } from "react-dom/client";
 import { createElement } from "react";
+import type { ContentScriptContext } from "wxt/client";
+import { createShadowRootUi } from "wxt/client";
 import { Overlay } from "@/ui/Overlay";
 import { CaretChip } from "@/ui/CaretChip";
 import { createOverlayController, type OverlayController } from "@/ui/state";
 import type { CriticIssue } from "@/core/types";
-import themeCss from "@/ui/theme.css?inline";
-
-const HOST_ID = "luster-host";
+import "@/ui/theme.css";
 
 export interface OverlayMount {
   controller: OverlayController;
@@ -14,39 +14,48 @@ export interface OverlayMount {
   destroy: () => void;
 }
 
-export function mountOverlay(): OverlayMount {
-  const existing = document.getElementById(HOST_ID);
-  if (existing) existing.remove();
-
-  const host = document.createElement("div");
-  host.id = HOST_ID;
-  host.style.all = "initial";
-  document.body.appendChild(host);
-
-  const shadow = host.attachShadow({ mode: "open" });
-  const styleNode = document.createElement("style");
-  styleNode.textContent = themeCss;
-  shadow.appendChild(styleNode);
-
-  const overlayMount = document.createElement("div");
-  const caretMount = document.createElement("div");
-  shadow.appendChild(overlayMount);
-  shadow.appendChild(caretMount);
-
+export async function mountOverlay(
+  ctx: ContentScriptContext,
+): Promise<OverlayMount> {
   const controller = createOverlayController();
-
-  const overlayRoot: Root = createRoot(overlayMount);
-  overlayRoot.render(createElement(Overlay, { controller }));
-
-  const caretRoot: Root = createRoot(caretMount);
   let caretRect: DOMRect | null = null;
   let caretIssue: CriticIssue | null = null;
+  let caretRoot: Root | null = null;
+  let overlayRoot: Root | null = null;
+
   function renderCaretChip(): void {
+    if (!caretRoot) return;
     caretRoot.render(
       createElement(CaretChip, { caretRect, issue: caretIssue }),
     );
   }
-  renderCaretChip();
+
+  const ui = await createShadowRootUi(ctx, {
+    name: "luster-overlay",
+    position: "inline",
+    anchor: "body",
+    append: "last",
+    onMount(container) {
+      const overlayMountPoint = document.createElement("div");
+      const caretMountPoint = document.createElement("div");
+      container.appendChild(overlayMountPoint);
+      container.appendChild(caretMountPoint);
+
+      overlayRoot = createRoot(overlayMountPoint);
+      overlayRoot.render(createElement(Overlay, { controller }));
+
+      caretRoot = createRoot(caretMountPoint);
+      renderCaretChip();
+    },
+    onRemove() {
+      overlayRoot?.unmount();
+      caretRoot?.unmount();
+      overlayRoot = null;
+      caretRoot = null;
+    },
+  });
+
+  ui.mount();
 
   return {
     controller,
@@ -56,9 +65,7 @@ export function mountOverlay(): OverlayMount {
       renderCaretChip();
     },
     destroy() {
-      overlayRoot.unmount();
-      caretRoot.unmount();
-      host.remove();
+      ui.remove();
     },
   };
 }

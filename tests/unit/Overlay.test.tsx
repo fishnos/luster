@@ -20,9 +20,15 @@ const baseStats: DocStats = {
 
 afterEach(cleanup);
 
+function controllerWithKey() {
+  const controller = createOverlayController();
+  controller.setConnectState("connected", "gemini");
+  return controller;
+}
+
 describe("Overlay", () => {
-  it("renders three mode tabs with the active one selected", () => {
-    const controller = createOverlayController();
+  it("renders three mode tabs with the active one selected when connected", () => {
+    const controller = controllerWithKey();
     render(<Overlay controller={controller} />);
 
     expect(screen.getByRole("tab", { name: /reading/i })).toHaveAttribute(
@@ -40,39 +46,45 @@ describe("Overlay", () => {
   });
 
   it("shows the idle prompt for the active mode when there is no output", () => {
-    const controller = createOverlayController();
+    const controller = controllerWithKey();
     render(<Overlay controller={controller} />);
     expect(
-      screen.getByText(/finish a paragraph to get a read-back/i),
+      screen.getByText(/finish a paragraph to get an editor's read-back/i),
     ).toBeInTheDocument();
   });
 
   it("switches the visible panel when a different tab is clicked", async () => {
-    const controller = createOverlayController();
+    const controller = controllerWithKey();
     const user = userEvent.setup();
     render(<Overlay controller={controller} />);
 
     await user.click(screen.getByRole("tab", { name: /critic/i }));
     expect(controller.getState().activeMode).toBe("critic");
     expect(
-      screen.getByText(/finish a sentence to be critiqued/i),
+      await screen.findByText(/finish a sentence to be critiqued/i),
     ).toBeInTheDocument();
   });
 
-  it("renders live stats when the controller publishes them", () => {
-    const controller = createOverlayController();
+  it("renders the live word count in the header", () => {
+    const controller = controllerWithKey();
     controller.setStats(baseStats);
     render(<Overlay controller={controller} />);
 
-    expect(screen.getByText("words")).toBeInTheDocument();
-    expect(screen.getByText("24")).toBeInTheDocument();
+    expect(screen.getByLabelText(/24 words in document/i)).toBeInTheDocument();
+  });
+
+  it("renders live stats in the stats panel", () => {
+    const controller = controllerWithKey();
+    controller.setStats(baseStats);
+    render(<Overlay controller={controller} />);
+
     expect(screen.getByText("passive")).toBeInTheDocument();
     expect(screen.getByText("25%")).toBeInTheDocument();
     expect(screen.getByText("she")).toBeInTheDocument();
   });
 
   it("renders the parsed reading output when reading mode is ok", () => {
-    const controller = createOverlayController();
+    const controller = controllerWithKey();
     controller.setModeOutput("reading", {
       mode: "reading",
       result: {
@@ -90,7 +102,7 @@ describe("Overlay", () => {
   });
 
   it("renders an interrogation question with its kind tag", async () => {
-    const controller = createOverlayController();
+    const controller = controllerWithKey();
     controller.setActiveMode("interrogation");
     controller.setModeOutput("interrogation", {
       mode: "interrogation",
@@ -113,7 +125,7 @@ describe("Overlay", () => {
 
   it("renders critic issues with severity badges and a highlighted span", () => {
     const sentence = "The dog quickly ran out the door.";
-    const controller = createOverlayController();
+    const controller = controllerWithKey();
     controller.setActiveMode("critic");
     controller.setCriticSentence(sentence);
     controller.setModeOutput("critic", {
@@ -135,8 +147,8 @@ describe("Overlay", () => {
     expect(screen.getByText("quickly")).toBeInTheDocument();
   });
 
-  it("shows a rate-limited banner when a mode is paused", async () => {
-    const controller = createOverlayController();
+  it("shows a rate-limited banner when a mode is paused", () => {
+    const controller = controllerWithKey();
     controller.setActiveMode("critic");
     controller.setModeRateLimited("critic", 12_000);
     render(<Overlay controller={controller} />);
@@ -146,19 +158,32 @@ describe("Overlay", () => {
     ).toBeInTheDocument();
   });
 
-  it("collapses and expands when the chevron button is clicked", async () => {
+  it("shows the connect banner when no key is present", () => {
     const controller = createOverlayController();
+    controller.setConnectState("missing", null);
+    render(<Overlay controller={controller} />);
+
+    expect(screen.getByText(/connect to ai to start/i)).toBeInTheDocument();
+  });
+
+  it("opens the inline settings view from the header", async () => {
+    const controller = controllerWithKey();
     const user = userEvent.setup();
     render(<Overlay controller={controller} />);
 
-    const collapseButton = screen.getByRole("button", {
-      name: /collapse luster/i,
-    });
-    await user.click(collapseButton);
+    await user.click(screen.getByRole("button", { name: /open settings/i }));
+    expect(controller.getState().view).toBe("settings");
+  });
 
-    expect(controller.getState().collapsed).toBe(true);
+  it("minimizes to a floating badge when the close button is pressed", async () => {
+    const controller = controllerWithKey();
+    const user = userEvent.setup();
+    render(<Overlay controller={controller} />);
+
+    await user.click(screen.getByRole("button", { name: /minimize luster/i }));
+    expect(controller.getState().minimized).toBe(true);
     expect(
-      screen.queryByRole("tab", { name: /reading/i }),
-    ).not.toBeInTheDocument();
+      await screen.findByRole("button", { name: /open luster/i }),
+    ).toBeInTheDocument();
   });
 });

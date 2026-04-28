@@ -61,7 +61,7 @@ export function createAiClient(deps: AiClientDeps): AiClient {
 
   return {
     async runForMode(request) {
-      const provider = await keyVault.getActiveProvider(request.mode);
+      const provider = await keyVault.getActiveProvider();
       const providerClient = providers[provider];
 
       const apiKey = await keyVault.getApiKey(provider);

@@ -2,10 +2,13 @@ import type { ModeName, ProviderId } from "@/core/types";
 import type { StorageBackend } from "@/core/storageBackend";
 
 const PROVIDER_IDS: ProviderId[] = ["anthropic", "openai", "gemini"];
+const MODE_NAMES: ModeName[] = ["reading", "interrogation", "critic"];
 
 const KEY_PREFIX = "luster.key.";
 const MODEL_PREFIX = "luster.model.";
-const ACTIVE_PROVIDER_PREFIX = "luster.activeProvider.";
+const ACTIVE_PROVIDER_KEY = "luster.activeProvider";
+const DEFAULT_MODE_KEY = "luster.defaultMode";
+const AUTO_LAUNCH_KEY = "luster.autoLaunch";
 
 export const DEFAULT_MODELS: Record<ProviderId, string> = {
   anthropic: "claude-sonnet-4-6",
@@ -13,11 +16,8 @@ export const DEFAULT_MODELS: Record<ProviderId, string> = {
   gemini: "gemini-2.5-flash",
 };
 
-const DEFAULT_PROVIDER_FOR_MODE: Record<ModeName, ProviderId> = {
-  reading: "anthropic",
-  interrogation: "anthropic",
-  critic: "openai",
-};
+const FALLBACK_PROVIDER: ProviderId = "gemini";
+const FALLBACK_MODE: ModeName = "reading";
 
 export interface KeyVault {
   getApiKey: (provider: ProviderId) => Promise<string | null>;
@@ -27,8 +27,12 @@ export interface KeyVault {
   listProvidersWithKey: () => Promise<ProviderId[]>;
   getModel: (provider: ProviderId) => Promise<string>;
   setModel: (provider: ProviderId, model: string) => Promise<void>;
-  getActiveProvider: (mode: ModeName) => Promise<ProviderId>;
-  setActiveProvider: (mode: ModeName, provider: ProviderId) => Promise<void>;
+  getActiveProvider: () => Promise<ProviderId>;
+  setActiveProvider: (provider: ProviderId) => Promise<void>;
+  getDefaultMode: () => Promise<ModeName>;
+  setDefaultMode: (mode: ModeName) => Promise<void>;
+  getAutoLaunch: () => Promise<boolean>;
+  setAutoLaunch: (enabled: boolean) => Promise<void>;
 }
 
 export function createKeyVault(storage: StorageBackend): KeyVault {
@@ -37,9 +41,6 @@ export function createKeyVault(storage: StorageBackend): KeyVault {
   }
   function modelKeyOf(provider: ProviderId): string {
     return `${MODEL_PREFIX}${provider}`;
-  }
-  function activeProviderKeyOf(mode: ModeName): string {
-    return `${ACTIVE_PROVIDER_PREFIX}${mode}`;
   }
 
   return {
@@ -88,18 +89,40 @@ export function createKeyVault(storage: StorageBackend): KeyVault {
       await storage.setMany({ [modelKeyOf(provider)]: trimmed });
     },
 
-    async getActiveProvider(mode) {
-      const result = await storage.getMany([activeProviderKeyOf(mode)]);
-      const stored = result[activeProviderKeyOf(mode)];
-      if (isProviderId(stored)) return stored;
-      return DEFAULT_PROVIDER_FOR_MODE[mode];
+    async getActiveProvider() {
+      const result = await storage.getMany([ACTIVE_PROVIDER_KEY]);
+      const stored = result[ACTIVE_PROVIDER_KEY];
+      return isProviderId(stored) ? stored : FALLBACK_PROVIDER;
     },
 
-    async setActiveProvider(mode, provider) {
+    async setActiveProvider(provider) {
       if (!PROVIDER_IDS.includes(provider)) {
         throw new Error(`Unknown provider: ${provider}`);
       }
-      await storage.setMany({ [activeProviderKeyOf(mode)]: provider });
+      await storage.setMany({ [ACTIVE_PROVIDER_KEY]: provider });
+    },
+
+    async getDefaultMode() {
+      const result = await storage.getMany([DEFAULT_MODE_KEY]);
+      const stored = result[DEFAULT_MODE_KEY];
+      return isModeName(stored) ? stored : FALLBACK_MODE;
+    },
+
+    async setDefaultMode(mode) {
+      if (!MODE_NAMES.includes(mode)) {
+        throw new Error(`Unknown mode: ${mode}`);
+      }
+      await storage.setMany({ [DEFAULT_MODE_KEY]: mode });
+    },
+
+    async getAutoLaunch() {
+      const result = await storage.getMany([AUTO_LAUNCH_KEY]);
+      const stored = result[AUTO_LAUNCH_KEY];
+      return stored !== false;
+    },
+
+    async setAutoLaunch(enabled) {
+      await storage.setMany({ [AUTO_LAUNCH_KEY]: enabled === true });
     },
   };
 }
@@ -108,4 +131,8 @@ function isProviderId(value: unknown): value is ProviderId {
   return (
     typeof value === "string" && PROVIDER_IDS.includes(value as ProviderId)
   );
+}
+
+function isModeName(value: unknown): value is ModeName {
+  return typeof value === "string" && MODE_NAMES.includes(value as ModeName);
 }

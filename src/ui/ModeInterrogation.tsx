@@ -1,5 +1,4 @@
 import type { InterrogationOutput } from "@/core/types";
-import { Card, CardBody, CardHeader } from "@/ui/components/Card";
 import { ModeStatusBanner } from "@/ui/ModeStatusBanner";
 import type { ModeOverlayInfo } from "@/ui/state";
 import { cn } from "@/ui/cn";
@@ -8,9 +7,9 @@ const KIND_STYLES: Record<
   InterrogationOutput["questions"][number]["kind"],
   string
 > = {
-  intent: "border-luster-accent/40 text-luster-accent",
-  craft: "border-luster-ok/40 text-luster-ok",
-  reader: "border-luster-warn/40 text-luster-warn",
+  intent: "border-[#ebd9b3] bg-luster-accent-soft text-luster-accent",
+  craft: "border-[#cfe1cd] bg-[#eef5ed] text-luster-ok",
+  reader: "border-[#f3d9a8] bg-[#fdf6e7] text-luster-warn",
 };
 
 export interface ModeInterrogationProps {
@@ -19,38 +18,36 @@ export interface ModeInterrogationProps {
 
 export function ModeInterrogation({ info }: ModeInterrogationProps) {
   return (
-    <Card>
-      <CardHeader>
-        <span>Interrogation</span>
-        {info.provider && (
-          <span className="text-luster-muted">{info.provider}</span>
-        )}
-      </CardHeader>
-      <CardBody className="space-y-3 text-xs">
+    <div className="rounded-md border border-luster-border bg-luster-card">
+      <div className="flex items-center justify-between border-b border-luster-border px-3 py-2 text-[10px] uppercase tracking-[0.14em] text-luster-faint">
+        <span>Interrogation · curious reader</span>
+        {info.provider && <span>{info.provider}</span>}
+      </div>
+      <div className="px-3 py-3 text-[13px]">
         <ModeStatusBanner
           info={info}
-          idleText="Finish a sentence to be questioned."
+          idleText="Finish a sentence and a question will appear."
         />
         {info.status === "ok" && info.output?.mode === "interrogation" && (
-          <ul className="space-y-2.5">
+          <ul className="luster-cross space-y-3">
             {info.output.result.questions.map((question, index) => (
-              <li key={index} className="flex gap-2">
+              <li key={index} className="space-y-1.5">
                 <span
                   className={cn(
-                    "mt-0.5 inline-flex h-5 shrink-0 items-center rounded border px-1.5 text-[10px] uppercase tracking-wider",
+                    "inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] uppercase tracking-[0.14em]",
                     KIND_STYLES[question.kind],
                   )}
                 >
                   {question.kind}
                 </span>
-                <span className="text-luster-ink leading-snug">
+                <p className="luster-serif text-[14px] leading-snug text-luster-ink">
                   {question.text}
-                </span>
+                </p>
               </li>
             ))}
           </ul>
         )}
-      </CardBody>
-    </Card>
+      </div>
+    </div>
   );
 }

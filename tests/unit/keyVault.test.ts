@@ -45,23 +45,35 @@ describe("createKeyVault", () => {
     expect(await vault.getModel("openai")).toBe(DEFAULT_MODELS.openai);
   });
 
-  it("returns the per-mode default active provider when unset", async () => {
+  it("falls back to gemini as the default active provider when unset", async () => {
     const vault = createKeyVault(createInMemoryStorage());
-    expect(await vault.getActiveProvider("reading")).toBe("anthropic");
-    expect(await vault.getActiveProvider("critic")).toBe("openai");
+    expect(await vault.getActiveProvider()).toBe("gemini");
   });
 
-  it("persists a per-mode active provider override", async () => {
+  it("persists a global active provider override", async () => {
     const vault = createKeyVault(createInMemoryStorage());
-    await vault.setActiveProvider("critic", "gemini");
-    expect(await vault.getActiveProvider("critic")).toBe("gemini");
-    expect(await vault.getActiveProvider("reading")).toBe("anthropic");
+    await vault.setActiveProvider("anthropic");
+    expect(await vault.getActiveProvider()).toBe("anthropic");
   });
 
   it("rejects an unknown active provider id", async () => {
     const vault = createKeyVault(createInMemoryStorage());
-    await expect(
-      vault.setActiveProvider("reading", "mystery" as any),
-    ).rejects.toThrow();
+    await expect(vault.setActiveProvider("mystery" as any)).rejects.toThrow();
+  });
+
+  it("falls back to reading as the default mode when unset", async () => {
+    const vault = createKeyVault(createInMemoryStorage());
+    expect(await vault.getDefaultMode()).toBe("reading");
+  });
+
+  it("persists a default mode override", async () => {
+    const vault = createKeyVault(createInMemoryStorage());
+    await vault.setDefaultMode("critic");
+    expect(await vault.getDefaultMode()).toBe("critic");
+  });
+
+  it("rejects an unknown default mode id", async () => {
+    const vault = createKeyVault(createInMemoryStorage());
+    await expect(vault.setDefaultMode("rambling" as any)).rejects.toThrow();
   });
 });

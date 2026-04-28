@@ -8,7 +8,7 @@ export interface CaretChipProps {
   offsetY?: number;
 }
 
-export function CaretChip({ caretRect, issue, offsetY = 22 }: CaretChipProps) {
+export function CaretChip({ caretRect, issue, offsetY = 18 }: CaretChipProps) {
   const [windowSize, setWindowSize] = useState(() => ({
     width: typeof window !== "undefined" ? window.innerWidth : 1280,
     height: typeof window !== "undefined" ? window.innerHeight : 720,
@@ -38,14 +38,14 @@ export function CaretChip({ caretRect, issue, offsetY = 22 }: CaretChipProps) {
         width: chipWidth,
         zIndex: 2147483646,
       }}
-      className="luster-root rounded border border-luster-border bg-luster-panel shadow-overlay px-2 py-1.5 text-xs"
+      className="luster-root luster-card luster-mount px-2.5 py-2 text-[12px]"
     >
       <div className="flex items-center gap-2 mb-1">
         <SeverityBadge severity={issue.severity} />
         <span className="text-luster-ink truncate">{issue.label}</span>
       </div>
       {issue.suggestion && (
-        <div className="text-luster-muted leading-snug">
+        <div className="luster-serif text-luster-muted leading-snug">
           → {issue.suggestion}
         </div>
       )}

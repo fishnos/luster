@@ -8,10 +8,17 @@ export interface ModeStatusBannerProps {
 
 export function ModeStatusBanner({ info, idleText }: ModeStatusBannerProps) {
   if (info.status === "idle") {
-    return <div className="text-luster-muted">{idleText}</div>;
+    return <p className="text-[12px] text-luster-muted">{idleText}</p>;
   }
   if (info.status === "pending") {
-    return <div className="text-luster-accent animate-pulse">Thinking…</div>;
+    return (
+      <div className="flex items-center gap-2 text-[12px] text-luster-muted">
+        <span className="relative h-[2px] w-16 overflow-hidden rounded bg-luster-subtle">
+          <span className="absolute inset-0 luster-thinking-bar" />
+        </span>
+        <span>Reading…</span>
+      </div>
+    );
   }
   if (info.status === "error") {
     return (
@@ -43,10 +50,10 @@ function Banner({
   return (
     <div
       className={cn(
-        "rounded border px-2 py-1.5 text-xs",
+        "rounded-md border px-2.5 py-2 text-[12px]",
         tone === "err"
-          ? "border-luster-err/40 bg-luster-err/10 text-luster-err"
-          : "border-luster-warn/40 bg-luster-warn/10 text-luster-warn",
+          ? "border-[#f3c4bd] bg-[#fdf3f1] text-luster-err"
+          : "border-[#f3d9a8] bg-[#fdf6e7] text-luster-warn",
       )}
     >
       {children}

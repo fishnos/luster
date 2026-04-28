@@ -9,7 +9,8 @@ export default defineContentScript({
     "https://*.ghost.io/*",
   ],
   runAt: "document_idle",
-  main() {
-    runContentScript(proseMirrorAdapter);
+  cssInjectionMode: "ui",
+  async main(ctx) {
+    await runContentScript(ctx, proseMirrorAdapter);
   },
 });

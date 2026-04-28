@@ -32,7 +32,15 @@ export function createInMemoryStorage(
 }
 
 export function createBrowserLocalStorage(): StorageBackend {
-  const area = browser.storage.local;
+  const browserApi = globalThis as unknown as {
+    browser?: { storage?: { local?: BrowserStorageArea } };
+    chrome?: { storage?: { local?: BrowserStorageArea } };
+  };
+  const area =
+    browserApi.browser?.storage?.local ?? browserApi.chrome?.storage?.local;
+  if (!area) {
+    return createInMemoryStorage();
+  }
   return {
     async getMany(keys) {
       return (await area.get(keys)) as Record<string, unknown>;
@@ -47,4 +55,11 @@ export function createBrowserLocalStorage(): StorageBackend {
       await area.clear();
     },
   };
+}
+
+interface BrowserStorageArea {
+  get: (keys: string[]) => Promise<unknown>;
+  set: (values: Record<string, unknown>) => Promise<void>;
+  remove: (keys: string[]) => Promise<void>;
+  clear: () => Promise<void>;
 }

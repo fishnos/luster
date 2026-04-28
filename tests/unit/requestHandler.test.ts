@@ -75,6 +75,7 @@ describe("createRequestHandler", () => {
       }),
     });
     await services.keyVault.setApiKey("anthropic", "sk-ant-test");
+    await services.keyVault.setActiveProvider("anthropic");
 
     const handle = createRequestHandler(services);
     const response = await handle(makeRunModeRequest());

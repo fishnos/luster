@@ -7,6 +7,8 @@ import { computeStats } from "@/core/stats";
 import { docIdFor } from "@/lib/docId";
 import { sendRunMode } from "@/core/sendRequest";
 import { splitParagraphs } from "@/lib/sentenceSplit";
+import { createKeyVault } from "@/core/keyVault";
+import { createBrowserLocalStorage } from "@/core/storageBackend";
 
 const CONTEXT_PARAGRAPH_WINDOW = 3;
 
@@ -36,6 +38,10 @@ export function bootstrapAdapter(
   const handle: AdapterHandle = deps.adapter.attach(hostDocument);
   const docId = docIdFor(hostWindow.location.href, hostDocument.title);
   let lastQuestionKind: QuestionKind | null = null;
+
+  if (!deps.runMode) {
+    void hydrateSettings(deps.controller);
+  }
 
   const unsubscribeText = handle.onTextChange((text) => {
     deps.controller.setStats(computeStats(text));
@@ -119,4 +125,29 @@ function computeContextBefore(delta: CommitDelta): string {
   const targetIndex = Math.min(delta.paragraphIndex, paragraphs.length - 1);
   const start = Math.max(0, targetIndex - CONTEXT_PARAGRAPH_WINDOW);
   return paragraphs.slice(start, targetIndex).join("\n\n");
+}
+
+async function hydrateSettings(controller: OverlayController): Promise<void> {
+  try {
+    const keyVault = createKeyVault(createBrowserLocalStorage());
+    const [defaultMode, autoLaunch, activeProvider, providersWithKey] =
+      await Promise.all([
+        keyVault.getDefaultMode(),
+        keyVault.getAutoLaunch(),
+        keyVault.getActiveProvider(),
+        keyVault.listProvidersWithKey(),
+      ]);
+    controller.setActiveMode(defaultMode);
+    controller.setAutoLaunch(autoLaunch);
+    controller.setMinimized(!autoLaunch);
+    if (providersWithKey.length === 0) {
+      controller.setConnectState("missing", null);
+    } else if (providersWithKey.includes(activeProvider)) {
+      controller.setConnectState("connected", activeProvider);
+    } else {
+      controller.setConnectState("missing", activeProvider);
+    }
+  } catch {
+    controller.setConnectState("missing", null);
+  }
 }

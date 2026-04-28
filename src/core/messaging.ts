@@ -71,7 +71,12 @@ export interface SetModelRequest {
 
 export interface SetActiveProviderRequest {
   type: "settings/set-active-provider";
-  payload: { mode: ModeName; provider: ProviderId };
+  payload: { provider: ProviderId };
+}
+
+export interface SetDefaultModeRequest {
+  type: "settings/set-default-mode";
+  payload: { mode: ModeName };
 }
 
 export interface SetHistoryEnabledRequest {
@@ -117,6 +122,7 @@ export type LusterRequest =
   | ClearKeyRequest
   | SetModelRequest
   | SetActiveProviderRequest
+  | SetDefaultModeRequest
   | SetHistoryEnabledRequest
   | AppendHistoryRequest
   | GetHistoryRequest

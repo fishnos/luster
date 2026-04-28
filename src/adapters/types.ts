@@ -2,6 +2,8 @@ export type AdapterId = "google-docs" | "notion" | "prosemirror";
 
 export interface Adapter {
   id: AdapterId;
+  matchUrl: (url: URL) => boolean;
+  matchEditor: (hostDocument: Document) => boolean;
   match: (url: URL, hostDocument: Document) => boolean;
   attach: (hostDocument: Document) => AdapterHandle;
 }
