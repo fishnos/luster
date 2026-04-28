@@ -1,0 +1,13 @@
+node_modules/
+.output/
+.wxt/
+.vscode/
+.idea/
+*.log
+.DS_Store
+.env
+.env.*
+!.env.example
+stats.html
+coverage/
+dist/
