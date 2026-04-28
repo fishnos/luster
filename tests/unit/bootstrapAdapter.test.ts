@@ -225,7 +225,7 @@ describe("bootstrapAdapter", () => {
 
     handle.emitCommit(sampleDelta);
     await flushMicrotasks();
-    handle.emitCommit(sampleDelta);
+    handle.emitCommit({ ...sampleDelta, sentence: "A second sentence." });
     await flushMicrotasks();
 
     expect(runMode.mock.calls[0]![0].lastQuestionKind).toBeNull();
@@ -263,5 +263,5 @@ describe("bootstrapAdapter", () => {
 });
 
 function flushMicrotasks(): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, 0));
+  return new Promise((resolve) => setTimeout(resolve, 1700));
 }

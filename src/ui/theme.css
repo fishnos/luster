@@ -11,23 +11,27 @@
 
 .luster-root {
   font-family:
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    sans-serif;
+    -apple-system, BlinkMacSystemFont, "Inter", "SF Pro Text", ui-sans-serif,
+    system-ui, "Segoe UI", sans-serif;
   font-size: 13px;
   line-height: 1.5;
   color: #1a1816;
+  letter-spacing: -0.005em;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  font-feature-settings: "ss01", "cv11";
+  font-feature-settings: "kern", "liga", "calt";
+}
+
+.luster-num {
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum", "lnum";
 }
 
 .luster-card {
-  background: #ffffff;
-  border: 1px solid #e8e3d8;
+  background: rgba(255, 252, 246, 0.78);
+  -webkit-backdrop-filter: saturate(170%) blur(22px);
+  backdrop-filter: saturate(170%) blur(22px);
+  border: 1px solid rgba(232, 227, 216, 0.85);
   border-radius: 14px;
   box-shadow:
     0 1px 0 rgba(26, 24, 22, 0.04),

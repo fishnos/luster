@@ -178,7 +178,7 @@ function Header({
     >
       <Mark size={20} />
       <div className="flex items-baseline gap-2">
-        <span className="luster-serif text-[15px] tracking-tight text-luster-ink">
+        <span className="luster-serif text-[15px] tracking-[-0.01em] text-luster-ink">
           Luster
         </span>
         <StatusDot status={state.modes[state.activeMode].status} />
@@ -186,10 +186,12 @@ function Header({
 
       <div className="ml-auto flex items-center gap-1">
         <span
-          className="luster-mono text-[11px] tabular-nums text-luster-faint mr-1"
+          className="luster-num text-[11.5px] text-luster-muted mr-1.5 leading-none"
           aria-label={`${wordCount} words in document`}
         >
-          {wordCount.toLocaleString("en-US")}{" "}
+          <span className="text-luster-ink">
+            {wordCount.toLocaleString("en-US")}
+          </span>{" "}
           <span className="text-luster-faint">words</span>
         </span>
         {state.hostKind === "google-docs" && (

@@ -16,12 +16,31 @@ export interface ModeSegmentProps {
 }
 
 export function ModeSegment({ active, modes, onSelect }: ModeSegmentProps) {
+  const activeIndex = Math.max(
+    0,
+    TABS.findIndex((tab) => tab.mode === active),
+  );
   return (
     <div
       role="tablist"
       aria-label="Mode"
-      className="grid grid-cols-3 gap-1 rounded-md border border-luster-border bg-luster-surface p-1"
+      className="relative grid grid-cols-3 gap-0 rounded-md border border-luster-border bg-luster-surface/70 p-1"
     >
+      <motion.span
+        aria-hidden
+        className="pointer-events-none absolute top-1 bottom-1 rounded bg-luster-card shadow-[0_1px_0_rgba(26,24,22,0.05),0_0_0_1px_rgba(26,24,22,0.06)]"
+        style={{
+          left: 4,
+          width: "calc((100% - 8px) / 3)",
+        }}
+        animate={{ x: `${activeIndex * 100}%` }}
+        transition={{
+          type: "spring",
+          stiffness: 520,
+          damping: 38,
+          mass: 0.55,
+        }}
+      />
       {TABS.map((tab) => {
         const isActive = active === tab.mode;
         const status = modes[tab.mode].status;
@@ -33,24 +52,11 @@ export function ModeSegment({ active, modes, onSelect }: ModeSegmentProps) {
             aria-selected={isActive}
             aria-controls={`luster-panel-${tab.mode}`}
             onClick={() => onSelect(tab.mode)}
-            className="relative flex h-7 items-center justify-center"
+            className="luster-press relative z-10 flex h-7 items-center justify-center gap-1.5"
           >
-            {isActive && (
-              <motion.span
-                layoutId="luster-mode-pill"
-                aria-hidden
-                className="absolute inset-0 rounded bg-luster-card shadow-[0_1px_0_rgba(26,24,22,0.05),0_0_0_1px_rgba(26,24,22,0.06)]"
-                transition={{
-                  type: "spring",
-                  stiffness: 520,
-                  damping: 38,
-                  mass: 0.6,
-                }}
-              />
-            )}
             <span
               className={cn(
-                "relative z-10 flex items-center gap-1.5 text-[12px] font-medium transition-colors duration-150",
+                "flex items-center gap-1.5 text-[12px] font-medium transition-colors duration-150",
                 isActive ? "text-luster-ink" : "text-luster-muted",
               )}
             >

@@ -9,9 +9,11 @@ import {
 } from "@/runtime/kixBridgeProtocol";
 
 const EDITOR_CANVAS_MIN_DIMENSION = 200;
-const RECONSTRUCT_IDLE_MS = 220;
+const RECONSTRUCT_DEBOUNCE_MS = 350;
 const SUPPORT_PROBE_MS = 4000;
 const MAX_GLYPHS_PER_CANVAS = 12000;
+const CLEAR_RECT_COOLDOWN_MS = 250;
+const STABLE_CANDIDATE_THRESHOLD = 3;
 
 export default defineContentScript({
   matches: ["https://docs.google.com/document/*"],
@@ -48,6 +50,10 @@ function installCanvasBridge(): void {
   let lastReconstructedTextLength = 0;
   let lastReconstructedParagraphCount = 0;
   let lastReconstructedSample = "";
+  let lastEmittedText = "";
+  let pendingCandidateText = "";
+  let lastClearRectTime = 0;
+  let pendingCandidateCount = 0;
 
   const proto = CanvasRenderingContext2D.prototype;
   const originalFillText = proto.fillText;
@@ -115,12 +121,12 @@ function installCanvasBridge(): void {
       const canvas = this.canvas;
       if (canvas && isEditorCanvas(canvas)) {
         clearRectCalls += 1;
-        if (
-          x <= 0.5 &&
-          y <= 0.5 &&
-          width >= canvas.width - 1 &&
-          height >= canvas.height - 1
-        ) {
+        lastClearRectTime = performance.now();
+        const clearArea = Math.max(0, width) * Math.max(0, height);
+        const canvasArea = canvas.width * canvas.height;
+        const cssArea = canvas.clientWidth * canvas.clientHeight;
+        const referenceArea = Math.max(canvasArea, cssArea, 1);
+        if (clearArea / referenceArea >= 0.6) {
           const buffers = buffersByCanvas.get(canvas);
           if (buffers) {
             if (buffers.current.length > 0) {
@@ -211,8 +217,20 @@ function installCanvasBridge(): void {
   function readGlyphsForReconstruction(canvas: HTMLCanvasElement): RawGlyph[] {
     const buffers = buffersByCanvas.get(canvas);
     if (!buffers) return [];
-    if (buffers.last.length > 0) return buffers.last;
-    return buffers.current;
+    const source = buffers.last.length > 0 ? buffers.last : buffers.current;
+    return dedupeGlyphs(source);
+  }
+
+  function dedupeGlyphs(source: RawGlyph[]): RawGlyph[] {
+    const seen = new Set<string>();
+    const unique: RawGlyph[] = [];
+    for (const glyph of source) {
+      const key = `${glyph.text}|${Math.round(glyph.x)}|${Math.round(glyph.y)}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      unique.push(glyph);
+    }
+    return unique;
   }
 
   function totalGlyphCount(): number {
@@ -255,29 +273,14 @@ function installCanvasBridge(): void {
   }
 
   function scheduleReconstruct(): void {
-    if (pendingReconstruct !== null) return;
-    const idle = (
-      window as unknown as {
-        requestIdleCallback?: (
-          callback: () => void,
-          options?: { timeout: number },
-        ) => number;
-      }
-    ).requestIdleCallback;
-    if (typeof idle === "function") {
-      pendingReconstruct = idle(
-        () => {
-          pendingReconstruct = null;
-          runReconstruct();
-        },
-        { timeout: RECONSTRUCT_IDLE_MS },
-      );
-    } else {
-      pendingReconstruct = window.setTimeout(() => {
-        pendingReconstruct = null;
-        runReconstruct();
-      }, RECONSTRUCT_IDLE_MS) as unknown as number;
+    if (pendingReconstruct !== null) {
+      window.clearTimeout(pendingReconstruct as number);
+      pendingReconstruct = null;
     }
+    pendingReconstruct = window.setTimeout(() => {
+      pendingReconstruct = null;
+      runReconstruct();
+    }, RECONSTRUCT_DEBOUNCE_MS) as unknown as number;
   }
 
   function runReconstruct(): void {
@@ -303,10 +306,42 @@ function installCanvasBridge(): void {
       lastReconstructedTextLength = reconstruction.fullText.length;
       lastReconstructedParagraphCount = reconstruction.paragraphs.length;
       lastReconstructedSample = reconstruction.fullText.slice(0, 160);
+
+      const candidate = reconstruction.fullText;
+      if (candidate === lastEmittedText) {
+        pendingCandidateText = "";
+        pendingCandidateCount = 0;
+        return;
+      }
+
+      const timeSinceClear = performance.now() - lastClearRectTime;
+      if (timeSinceClear < CLEAR_RECT_COOLDOWN_MS) {
+        scheduleReconstruct();
+        return;
+      }
+
+      if (candidate === pendingCandidateText) {
+        pendingCandidateCount += 1;
+      } else {
+        pendingCandidateText = candidate;
+        pendingCandidateCount = 1;
+      }
+      const isMonotonicGrowth =
+        candidate.length > lastEmittedText.length &&
+        candidate.startsWith(lastEmittedText);
+      const stableLongEnough = pendingCandidateCount >= STABLE_CANDIDATE_THRESHOLD;
+      if (!isMonotonicGrowth && !stableLongEnough) {
+        scheduleReconstruct();
+        return;
+      }
+
+      lastEmittedText = candidate;
+      pendingCandidateText = "";
+      pendingCandidateCount = 0;
       postBridgeMessage({
         channel: BRIDGE_NAMESPACE,
         type: "text",
-        fullText: reconstruction.fullText,
+        fullText: candidate,
         paragraphs: reconstruction.paragraphs,
         glyphCount: merged.length,
         generation: ++generation,
@@ -379,6 +414,17 @@ function installCanvasBridge(): void {
   }
 
   window.setInterval(pollCaret, 200);
+
+  window.setInterval(() => {
+    for (const canvas of trackedCanvases) {
+      const buffers = buffersByCanvas.get(canvas);
+      if (!buffers) continue;
+      if (buffers.current.length > buffers.last.length / 2) {
+        buffers.last = buffers.current;
+        buffers.current = [];
+      }
+    }
+  }, 1200);
 
   window.addEventListener("message", (event: MessageEvent) => {
     try {

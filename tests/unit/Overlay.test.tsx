@@ -78,9 +78,9 @@ describe("Overlay", () => {
     controller.setStats(baseStats);
     render(<Overlay controller={controller} />);
 
-    expect(screen.getByText("passive")).toBeInTheDocument();
-    expect(screen.getByText("25%")).toBeInTheDocument();
-    expect(screen.getByText("she")).toBeInTheDocument();
+    expect(screen.getAllByText("words").length).toBeGreaterThan(0);
+    expect(screen.getByText("sentences")).toBeInTheDocument();
+    expect(screen.getByText("avg")).toBeInTheDocument();
   });
 
   it("renders the parsed reading output when reading mode is ok", () => {

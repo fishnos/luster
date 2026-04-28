@@ -11,6 +11,7 @@ import { createKeyVault } from "@/core/keyVault";
 import { createBrowserLocalStorage } from "@/core/storageBackend";
 
 const CONTEXT_PARAGRAPH_WINDOW = 3;
+const COMMIT_QUIET_MS = 1500;
 
 export interface BootstrapAdapterDeps {
   adapter: Adapter;
@@ -47,9 +48,44 @@ export function bootstrapAdapter(
     deps.controller.setStats(computeStats(text));
   });
 
+  let pendingCommit: { mode: ModeName; delta: CommitDelta } | null = null;
+  let commitTimer: ReturnType<typeof setTimeout> | null = null;
+  const lastSentenceFiredFor = new Set<string>();
+
+  function flushPendingCommit(): void {
+    if (commitTimer) {
+      clearTimeout(commitTimer);
+      commitTimer = null;
+    }
+    if (!pendingCommit) return;
+    const { mode, delta } = pendingCommit;
+    pendingCommit = null;
+    const sentenceKey = delta.sentence
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, " ");
+    if (sentenceKey.length === 0) return;
+    if (lastSentenceFiredFor.has(sentenceKey)) return;
+    lastSentenceFiredFor.add(sentenceKey);
+    if (lastSentenceFiredFor.size > 200) {
+      const next = new Set<string>();
+      let kept = 0;
+      for (const value of lastSentenceFiredFor) {
+        if (kept >= 100) break;
+        next.add(value);
+        kept += 1;
+      }
+      lastSentenceFiredFor.clear();
+      for (const value of next) lastSentenceFiredFor.add(value);
+    }
+    void runForMode(mode, delta);
+  }
+
   const unsubscribeCommit = handle.onCommit((delta) => {
     const activeMode = deps.controller.getState().activeMode;
-    void runForMode(activeMode, delta);
+    pendingCommit = { mode: activeMode, delta };
+    if (commitTimer) clearTimeout(commitTimer);
+    commitTimer = setTimeout(flushPendingCommit, COMMIT_QUIET_MS);
   });
 
   async function runForMode(mode: ModeName, delta: CommitDelta): Promise<void> {
@@ -113,6 +149,12 @@ export function bootstrapAdapter(
 
   return {
     detach() {
+      if (commitTimer) {
+        clearTimeout(commitTimer);
+        commitTimer = null;
+      }
+      pendingCommit = null;
+      lastSentenceFiredFor.clear();
       unsubscribeText();
       unsubscribeCommit();
       handle.detach();
