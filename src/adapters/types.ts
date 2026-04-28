@@ -2,8 +2,8 @@ export type AdapterId = "google-docs" | "notion" | "prosemirror";
 
 export interface Adapter {
   id: AdapterId;
-  match: (url: URL, document: Document) => boolean;
-  attach: (host: HTMLElement) => AdapterHandle;
+  match: (url: URL, hostDocument: Document) => boolean;
+  attach: (hostDocument: Document) => AdapterHandle;
 }
 
 export interface AnnotationRange {

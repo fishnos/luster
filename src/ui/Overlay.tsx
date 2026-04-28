@@ -33,7 +33,9 @@ export function Overlay({ controller }: OverlayProps) {
     (event: React.PointerEvent<HTMLDivElement>) => {
       if (event.button !== 0) return;
       const target = event.currentTarget;
-      target.setPointerCapture(event.pointerId);
+      if (typeof target.setPointerCapture === "function") {
+        target.setPointerCapture(event.pointerId);
+      }
       dragOriginRef.current = {
         pointerX: event.clientX,
         pointerY: event.clientY,
@@ -58,7 +60,11 @@ export function Overlay({ controller }: OverlayProps) {
   const onDragPointerUp = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
       const target = event.currentTarget;
-      if (target.hasPointerCapture(event.pointerId)) {
+      if (
+        typeof target.hasPointerCapture === "function" &&
+        target.hasPointerCapture(event.pointerId) &&
+        typeof target.releasePointerCapture === "function"
+      ) {
         target.releasePointerCapture(event.pointerId);
       }
       dragOriginRef.current = null;
