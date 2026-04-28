@@ -5,31 +5,50 @@ import type {
   TokenUsage,
 } from "@/core/types";
 import type { DocStats } from "@/core/stats";
+import type { CommitDelta } from "@/adapters/types";
+import type { QuestionKind } from "@/core/modes/prompts/interrogation";
 
 export interface RunModeRequest {
   type: "ai/run-mode";
   payload: {
     mode: ModeName;
-    sentence: string;
-    paragraph: string;
+    delta: CommitDelta;
+    stats: DocStats;
     contextBefore: string;
+    lastQuestionKind: QuestionKind | null;
     docId: string;
   };
 }
 
-export interface RunModeResponse {
-  ok: boolean;
-  output?: ModeOutput;
-  tokens?: TokenUsage;
-  error?: string;
-}
+export type RunModeFailureReason =
+  | "no-key"
+  | "rate-limited"
+  | "provider-error"
+  | "parse-error";
+
+export type RunModeResultData =
+  | {
+      ok: true;
+      output: ModeOutput;
+      tokens: TokenUsage;
+      provider: ProviderId;
+      model: string;
+      promptVersion: string;
+    }
+  | {
+      ok: false;
+      reason: RunModeFailureReason;
+      provider?: ProviderId;
+      retryAfterMs?: number;
+      error?: string;
+    };
 
 export interface ValidateKeyRequest {
   type: "key/validate";
   payload: { provider: ProviderId; apiKey: string };
 }
 
-export interface ValidateKeyResponse {
+export interface ValidateKeyResultData {
   ok: boolean;
   modelEcho?: string;
   error?: string;
@@ -60,6 +79,14 @@ export interface SetHistoryEnabledRequest {
   payload: { enabled: boolean };
 }
 
+export interface HistoryEntryInput {
+  timestamp: number;
+  mode: ModeName;
+  stats: DocStats;
+  output: ModeOutput;
+  tokens?: TokenUsage;
+}
+
 export interface AppendHistoryRequest {
   type: "history/append";
   payload: {
@@ -81,14 +108,6 @@ export interface ExportHistoryRequest {
 export interface ClearHistoryRequest {
   type: "history/clear";
   payload: { docId?: string };
-}
-
-export interface HistoryEntryInput {
-  timestamp: number;
-  mode: ModeName;
-  stats: DocStats;
-  output: ModeOutput;
-  tokens?: TokenUsage;
 }
 
 export type LusterRequest =
@@ -117,15 +136,6 @@ export interface ErrorResponse {
 export type LusterResponse<TData = unknown> = OkResponse<TData> | ErrorResponse;
 
 export type RequestSender = (request: LusterRequest) => Promise<LusterResponse>;
-
-export interface RequestHandlerArgs {
-  request: LusterRequest;
-  senderTabId?: number;
-}
-
-export type RequestHandler = (
-  args: RequestHandlerArgs,
-) => Promise<LusterResponse> | LusterResponse;
 
 export function ok<TData>(data?: TData): OkResponse<TData> {
   return data === undefined ? { ok: true } : { ok: true, data };

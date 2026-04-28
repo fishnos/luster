@@ -16,6 +16,7 @@ export type AnnotationKind = "critic-issue";
 export interface AdapterHandle {
   readText: () => string;
   onCommit: (callback: (delta: CommitDelta) => void) => UnsubscribeFn;
+  onTextChange: (callback: (text: string) => void) => UnsubscribeFn;
   caretRect: () => DOMRect | null;
   annotate?: (
     range: AnnotationRange,

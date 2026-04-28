@@ -26,13 +26,16 @@ export function createDomAdapterHandle(
   };
 
   const textStream: TextStream = createTextStream();
-  const callbacks = new Set<(delta: CommitDelta) => void>();
+  const commitCallbacks = new Set<(delta: CommitDelta) => void>();
+  const textChangeCallbacks = new Set<(text: string) => void>();
   const unsubscribeFromStream = textStream.onCommit((delta) => {
-    for (const callback of callbacks) callback(delta);
+    for (const callback of commitCallbacks) callback(delta);
   });
 
   const pushUpdate = debounce(() => {
-    textStream.update(config.readText());
+    const currentText = config.readText();
+    textStream.update(currentText);
+    for (const callback of textChangeCallbacks) callback(currentText);
   }, debounceMs);
 
   const observer = new MutationObserver((mutations) => {
@@ -44,20 +47,28 @@ export function createDomAdapterHandle(
   });
   observer.observe(config.editorElement, observeOptions);
 
-  textStream.update(config.readText());
+  const initialText = config.readText();
+  textStream.update(initialText);
+  for (const callback of textChangeCallbacks) callback(initialText);
 
   return {
     readText: () => config.readText(),
     onCommit(callback): UnsubscribeFn {
-      callbacks.add(callback);
-      return () => callbacks.delete(callback);
+      commitCallbacks.add(callback);
+      return () => commitCallbacks.delete(callback);
+    },
+    onTextChange(callback): UnsubscribeFn {
+      textChangeCallbacks.add(callback);
+      callback(config.readText());
+      return () => textChangeCallbacks.delete(callback);
     },
     caretRect: () => config.caretRect(),
     detach() {
       observer.disconnect();
       pushUpdate.cancel();
       unsubscribeFromStream();
-      callbacks.clear();
+      commitCallbacks.clear();
+      textChangeCallbacks.clear();
       textStream.reset();
     },
   };
