@@ -48,6 +48,23 @@ export function bootstrapAdapter(
     deps.controller.setStats(computeStats(text));
   });
 
+  const unsubscribeCaret = handle.onCaretChange((rect) => {
+    if (!rect) return;
+    const state = deps.controller.getState();
+    const panelWidth = 360;
+    const padding = 24;
+    let x = rect.right + padding;
+
+    if (x + panelWidth > window.innerWidth - padding) {
+      x = rect.left - panelWidth - padding;
+    }
+
+    deps.controller.setPosition({
+      x: Math.max(padding, x),
+      y: Math.max(padding, rect.top - 10),
+    });
+  });
+
   let pendingCommit: { mode: ModeName; delta: CommitDelta } | null = null;
   let commitTimer: ReturnType<typeof setTimeout> | null = null;
   const lastSentenceFiredFor = new Set<string>();
@@ -82,7 +99,10 @@ export function bootstrapAdapter(
   }
 
   const unsubscribeCommit = handle.onCommit((delta) => {
-    const activeMode = deps.controller.getState().activeMode;
+    const state = deps.controller.getState();
+    if (state.minimized) return;
+
+    const activeMode = state.activeMode;
     pendingCommit = { mode: activeMode, delta };
     if (commitTimer) clearTimeout(commitTimer);
     commitTimer = setTimeout(flushPendingCommit, COMMIT_QUIET_MS);
@@ -156,6 +176,7 @@ export function bootstrapAdapter(
       pendingCommit = null;
       lastSentenceFiredFor.clear();
       unsubscribeText();
+      unsubscribeCaret();
       unsubscribeCommit();
       handle.detach();
     },

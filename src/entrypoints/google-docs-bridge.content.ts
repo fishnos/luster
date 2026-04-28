@@ -34,8 +34,7 @@ function installCanvasBridge(): void {
   flag.__lusterBridgeInstalled = true;
 
   interface CanvasBuffers {
-    current: RawGlyph[];
-    last: RawGlyph[];
+    glyphs: RawGlyph[];
   }
   const buffersByCanvas = new WeakMap<HTMLCanvasElement, CanvasBuffers>();
   let trackedCanvases: HTMLCanvasElement[] = [];
@@ -129,10 +128,7 @@ function installCanvasBridge(): void {
         if (clearArea / referenceArea >= 0.6) {
           const buffers = buffersByCanvas.get(canvas);
           if (buffers) {
-            if (buffers.current.length > 0) {
-              buffers.last = buffers.current;
-            }
-            buffers.current = [];
+            buffers.glyphs = [];
             scheduleReconstruct();
           }
         }
@@ -195,17 +191,17 @@ function installCanvasBridge(): void {
 
     let buffers = buffersByCanvas.get(canvas);
     if (!buffers) {
-      buffers = { current: [], last: [] };
+      buffers = { glyphs: [] };
       buffersByCanvas.set(canvas, buffers);
       trackedCanvases.push(canvas);
     }
-    if (buffers.current.length >= MAX_GLYPHS_PER_CANVAS) {
-      buffers.current.splice(
+    if (buffers.glyphs.length >= MAX_GLYPHS_PER_CANVAS) {
+      buffers.glyphs.splice(
         0,
-        buffers.current.length - Math.floor(MAX_GLYPHS_PER_CANVAS * 0.75),
+        buffers.glyphs.length - Math.floor(MAX_GLYPHS_PER_CANVAS * 0.75),
       );
     }
-    buffers.current.push({
+    buffers.glyphs.push({
       text,
       x: transformedX,
       y: transformedY,
@@ -216,16 +212,17 @@ function installCanvasBridge(): void {
 
   function readGlyphsForReconstruction(canvas: HTMLCanvasElement): RawGlyph[] {
     const buffers = buffersByCanvas.get(canvas);
-    if (!buffers) return [];
-    const source = buffers.last.length > 0 ? buffers.last : buffers.current;
-    return dedupeGlyphs(source);
+    return buffers?.glyphs ?? [];
   }
 
   function dedupeGlyphs(source: RawGlyph[]): RawGlyph[] {
     const seen = new Set<string>();
     const unique: RawGlyph[] = [];
     for (const glyph of source) {
-      const key = `${glyph.text}|${Math.round(glyph.x)}|${Math.round(glyph.y)}`;
+      // Use fuzzy coordinates (round to 1 decimal place) to catch sub-pixel overlaps
+      const x = Math.round(glyph.x * 10) / 10;
+      const y = Math.round(glyph.y * 10) / 10;
+      const key = `${glyph.text}|${x}|${y}`;
       if (seen.has(key)) continue;
       seen.add(key);
       unique.push(glyph);
@@ -238,7 +235,7 @@ function installCanvasBridge(): void {
     for (const canvas of trackedCanvases) {
       const buffers = buffersByCanvas.get(canvas);
       if (!buffers) continue;
-      total += Math.max(buffers.current.length, buffers.last.length);
+      total += buffers.glyphs.length;
     }
     return total;
   }
@@ -302,7 +299,7 @@ function installCanvasBridge(): void {
           });
         }
       }
-      const reconstruction = reconstructDocument(merged);
+      const reconstruction = reconstructDocument(dedupeGlyphs(merged));
       lastReconstructedTextLength = reconstruction.fullText.length;
       lastReconstructedParagraphCount = reconstruction.paragraphs.length;
       lastReconstructedSample = reconstruction.fullText.slice(0, 160);
@@ -415,16 +412,7 @@ function installCanvasBridge(): void {
 
   window.setInterval(pollCaret, 200);
 
-  window.setInterval(() => {
-    for (const canvas of trackedCanvases) {
-      const buffers = buffersByCanvas.get(canvas);
-      if (!buffers) continue;
-      if (buffers.current.length > buffers.last.length / 2) {
-        buffers.last = buffers.current;
-        buffers.current = [];
-      }
-    }
-  }, 1200);
+  // No periodic buffer flip needed with single buffer
 
   window.addEventListener("message", (event: MessageEvent) => {
     try {

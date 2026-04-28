@@ -143,6 +143,8 @@ export const googleDocsAdapter: Adapter = {
 
     const commitCallbacks = new Set<(delta: CommitDelta) => void>();
     const textChangeCallbacks = new Set<(text: string) => void>();
+    const caretChangeCallbacks = new Set<(rect: DOMRect | null) => void>();
+    let lastCaretRect: DOMRect | null = null;
 
     const unsubscribeStream = textStream.onCommit((delta) => {
       for (const callback of commitCallbacks) callback(delta);
@@ -155,7 +157,17 @@ export const googleDocsAdapter: Adapter = {
         textStream.update(message.fullText);
         for (const callback of textChangeCallbacks) callback(message.fullText);
       } else if (message.type === "caret") {
-        lastCaretRect = message.rect ? toDomRect(message.rect) : null;
+        const rect = message.rect ? toDomRect(message.rect) : null;
+        if (
+          rect?.x === lastCaretRect?.x &&
+          rect?.y === lastCaretRect?.y &&
+          rect?.width === lastCaretRect?.width &&
+          rect?.height === lastCaretRect?.height
+        ) {
+          return;
+        }
+        lastCaretRect = rect;
+        for (const callback of caretChangeCallbacks) callback(rect);
       } else if (message.type === "state") {
         bridgeState = message.state;
       }
@@ -179,6 +191,11 @@ export const googleDocsAdapter: Adapter = {
         textChangeCallbacks.add(callback);
         if (lastFullText.length > 0) callback(lastFullText);
         return () => textChangeCallbacks.delete(callback);
+      },
+      onCaretChange(callback): UnsubscribeFn {
+        caretChangeCallbacks.add(callback);
+        if (lastCaretRect) callback(lastCaretRect);
+        return () => caretChangeCallbacks.delete(callback);
       },
       caretRect: () => lastCaretRect,
       detach() {

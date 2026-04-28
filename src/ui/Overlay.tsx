@@ -54,15 +54,16 @@ function FullPanel({
       transition={{ duration: 0.22, ease: EASE_OUT }}
       style={{
         position: "fixed",
-        right: state.position.x,
+        left: state.position.x,
         top: state.position.y,
         width: 360,
+        maxHeight: "85vh",
         zIndex: 2147483647,
       }}
-      className="luster-root luster-card text-luster-ink overflow-hidden"
+      className="luster-root luster-card text-luster-ink overflow-hidden flex flex-col"
     >
       <Header controller={controller} state={state} />
-      <div className="px-3 py-3">
+      <div className="flex-1 overflow-y-auto px-3 py-3 luster-panel-scroll">
         <AnimatePresence mode="wait" initial={false}>
           {state.view === "main" ? (
             <motion.div
@@ -143,9 +144,10 @@ function Header({
     (event: React.PointerEvent<HTMLDivElement>) => {
       const origin = dragOriginRef.current;
       if (!origin) return;
-      const nextX = origin.startX - (event.clientX - origin.pointerX);
+      const nextX = origin.startX + (event.clientX - origin.pointerX);
       const nextY = origin.startY + (event.clientY - origin.pointerY);
       controller.setPosition({ x: Math.max(0, nextX), y: Math.max(0, nextY) });
+      controller.setPinned(true);
     },
     [controller],
   );
@@ -185,6 +187,16 @@ function Header({
       </div>
 
       <div className="ml-auto flex items-center gap-1">
+        {state.isPinned && (
+          <Button
+            variant="icon"
+            aria-label="Follow cursor"
+            className="text-luster-accent"
+            onClick={() => controller.setPinned(false)}
+          >
+            <Icon name="pin" size={14} className="rotate-45" />
+          </Button>
+        )}
         <span
           className="luster-num text-[11.5px] text-luster-muted mr-1.5 leading-none"
           aria-label={`${wordCount} words in document`}
@@ -223,7 +235,7 @@ function Header({
           aria-label="Minimize Luster"
           onClick={() => controller.setMinimized(true)}
         >
-          <Icon name="close" size={14} />
+          <Icon name="minimize" size={14} />
         </Button>
       </div>
     </div>
@@ -352,7 +364,7 @@ function MinimizedBadge({
       whileHover={{ scale: 1.04 }}
       style={{
         position: "fixed",
-        right: state.position.x,
+        left: state.position.x,
         top: state.position.y,
         zIndex: 2147483647,
       }}

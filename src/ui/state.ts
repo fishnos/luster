@@ -30,6 +30,7 @@ export interface OverlayState {
   editorAttached: boolean;
   editorSearchStuck: boolean;
   hostKind: HostKind;
+  isPinned: boolean;
 }
 
 export type HostKind = "unknown" | "google-docs" | "notion" | "prosemirror";
@@ -41,7 +42,7 @@ export function createInitialOverlayState(): OverlayState {
     activeMode: "reading",
     view: "main",
     minimized: false,
-    position: { x: 16, y: 96 },
+    position: { x: window.innerWidth - 400, y: 96 },
     stats: null,
     modes: {
       reading: { ...INITIAL_MODE_INFO },
@@ -55,6 +56,7 @@ export function createInitialOverlayState(): OverlayState {
     editorAttached: false,
     editorSearchStuck: false,
     hostKind: "unknown",
+    isPinned: false,
   };
 }
 
@@ -80,6 +82,7 @@ export interface OverlayController {
   setEditorAttached: (value: boolean) => void;
   setEditorSearchStuck: (value: boolean) => void;
   setHostKind: (value: HostKind) => void;
+  setPinned: (value: boolean) => void;
   resetMode: (mode: ModeName) => void;
   reset: () => void;
 }
@@ -231,6 +234,11 @@ export function createOverlayController(): OverlayController {
       );
     },
 
+    setPinned(value) {
+      update((current) =>
+        current.isPinned === value ? current : { ...current, isPinned: value },
+      );
+    },
     resetMode(mode) {
       withMode(mode, () => ({ ...INITIAL_MODE_INFO }));
     },

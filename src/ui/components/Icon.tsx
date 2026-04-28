@@ -6,9 +6,25 @@ type IconName =
   | "back"
   | "sliders"
   | "sparkle"
-  | "arrow-right";
+  | "arrow-right"
+  | "pin"
+  | "minimize";
 
 const PATHS: Record<IconName, ReactElement> = {
+  pin: (
+    <path
+      d="M9 3 L9 15 M4 11 L14 11"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  ),
+  minimize: (
+    <path
+      d="M4 12 H14"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  ),
   close: (
     <path
       d="M5 5 L13 13 M13 5 L5 13"
