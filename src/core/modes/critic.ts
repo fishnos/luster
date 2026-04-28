@@ -83,7 +83,7 @@ export function createCriticEngine(deps: CriticEngineDeps): CriticEngine {
           contextBefore: input.contextBefore,
         }),
         expectJson: true,
-        maxTokens: 1024,
+        maxTokens: 2048,
         temperature: 0.2,
       });
 

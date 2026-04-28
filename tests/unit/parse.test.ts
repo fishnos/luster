@@ -76,3 +76,42 @@ describe("safeParse", () => {
     expect(result.error).toMatch(/voice/);
   });
 });
+
+describe("JSON repair (in safeParse)", () => {
+  it("repairs a truncated JSON object", () => {
+    const result = safeParse(ExampleSchema, '{"voice":"clipped"');
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("expected ok");
+    expect(result.data.voice).toBe("clipped");
+  });
+
+  it("repairs a truncated nested structure", () => {
+    const result = safeParse(ExampleSchema, '{"voice":"nested", "notes": ["a", "b"');
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("expected ok");
+    expect(result.data.notes).toEqual(["a", "b"]);
+  });
+
+  it("repairs a truncated string value", () => {
+    const result = safeParse(ExampleSchema, '{"voice":"unfinished string');
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("expected ok");
+    expect(result.data.voice).toBe("unfinished string");
+  });
+
+  it("handles empty or whitespace input", () => {
+    const result = safeParse(ExampleSchema, "   \n  ");
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("expected failure");
+    expect(result.error).toBe("empty AI response");
+  });
+
+  it("extracts fields via regex as a last resort", () => {
+    const noBraces = '"voice": "direct extraction", "notes": ["one", "two"]';
+    const result = safeParse(ExampleSchema, noBraces);
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("PARSE FAILED: " + result.error);
+    expect(result.data.voice).toBe("direct extraction");
+    expect(result.data.notes).toEqual(["one", "two"]);
+  });
+});

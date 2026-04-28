@@ -74,7 +74,7 @@ export function createInterrogationEngine(
           lastQuestionKind: input.lastQuestionKind,
         }),
         expectJson: true,
-        maxTokens: 512,
+        maxTokens: 1024,
         temperature: 0.6,
       });
 

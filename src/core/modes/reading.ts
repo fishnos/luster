@@ -68,7 +68,7 @@ export function createReadingEngine(deps: ReadingEngineDeps): ReadingEngine {
           contextBefore: input.contextBefore,
         }),
         expectJson: true,
-        maxTokens: 1024,
+        maxTokens: 2048,
         temperature: 0.3,
       });
 
