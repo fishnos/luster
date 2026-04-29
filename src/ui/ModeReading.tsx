@@ -13,9 +13,7 @@ export function ModeReading({ controller, info }: ModeReadingProps) {
       <header className="flex items-baseline justify-between">
         <span className="luster-eyebrow">Editor's read-back</span>
         {info.provider && (
-          <span className="text-[10px] tracking-[0.04em] text-luster-faint">
-            {info.provider}
-          </span>
+          <span className="luster-eyebrow">{info.provider}</span>
         )}
       </header>
       <div className="text-[13px]">

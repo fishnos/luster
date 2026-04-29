@@ -36,9 +36,7 @@ export function ModeCritic({ controller, info, sentence }: ModeCriticProps) {
       <header className="flex items-baseline justify-between">
         <span className="luster-eyebrow">Structure & connection</span>
         {info.provider && (
-          <span className="text-[10px] tracking-[0.04em] text-luster-faint">
-            {info.provider}
-          </span>
+          <span className="luster-eyebrow">{info.provider}</span>
         )}
       </header>
       <div className="text-[13px]">
@@ -114,9 +112,7 @@ function SpanQuote({
   return (
     <div className="luster-serif py-1 text-[13px] leading-snug">
       <span className="text-luster-faint">{before}</span>
-      <span className="text-luster-ink underline decoration-luster-warn decoration-wavy decoration-2 underline-offset-2">
-        {inside}
-      </span>
+      <span className="luster-squiggle text-luster-ink">{inside}</span>
       <span className="text-luster-faint">{after}</span>
     </div>
   );

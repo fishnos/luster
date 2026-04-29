@@ -1,5 +1,4 @@
 import type { ModeOverlayInfo } from "@/ui/state";
-import { Button } from "@/ui/components/ui/button";
 import { cn } from "@/ui/cn";
 
 export interface ModeStatusBannerProps {
@@ -50,14 +49,9 @@ export function ModeStatusBanner({
   if (info.status === "ok" && onReset) {
     return (
       <div className="mb-2 flex justify-end">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onReset}
-          className="h-auto p-0 text-[10px] uppercase tracking-[0.16em] text-luster-faint hover:text-luster-ink"
-        >
-          Clear
-        </Button>
+        <button type="button" onClick={onReset} className="luster-btn-text">
+          Reset
+        </button>
       </div>
     );
   }

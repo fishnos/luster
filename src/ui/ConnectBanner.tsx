@@ -1,17 +1,9 @@
 import { useState } from "react";
-import { cn } from "@/ui/cn";
 import type { ProviderId } from "@/core/types";
 import { sendValidateKey } from "@/core/sendRequest";
 import { createKeyVault } from "@/core/keyVault";
 import { createBrowserLocalStorage } from "@/core/storageBackend";
-
-const PROVIDERS: ProviderId[] = ["gemini", "anthropic", "openai"];
-
-const PROVIDER_LABEL: Record<ProviderId, string> = {
-  gemini: "Gemini",
-  anthropic: "Claude",
-  openai: "OpenAI",
-};
+import { ProviderTabs } from "@/ui/components/ProviderTabs";
 
 const PROVIDER_HINT: Record<ProviderId, string> = {
   gemini: "AIza…",
@@ -72,32 +64,13 @@ export function ConnectBanner({ onConnected }: ConnectBannerProps) {
         </p>
       </div>
 
-      <div className="flex items-center gap-3 text-[13px]">
-        {PROVIDERS.map((entry) => {
-          const isActive = entry === provider;
-          return (
-            <button
-              key={entry}
-              type="button"
-              onClick={() => {
-                setProvider(entry);
-                setStatus({ tone: "idle" });
-              }}
-              className={cn(
-                "luster-press relative pb-1 font-medium transition-colors",
-                isActive
-                  ? "text-luster-ink"
-                  : "text-luster-faint hover:text-luster-muted",
-              )}
-            >
-              {PROVIDER_LABEL[entry]}
-              {isActive && (
-                <span className="absolute inset-x-0 bottom-0 h-px bg-luster-ink" />
-              )}
-            </button>
-          );
-        })}
-      </div>
+      <ProviderTabs
+        active={provider}
+        onSelect={(next) => {
+          setProvider(next);
+          setStatus({ tone: "idle" });
+        }}
+      />
 
       <div className="flex items-center gap-2">
         <input
@@ -111,29 +84,31 @@ export function ConnectBanner({ onConnected }: ConnectBannerProps) {
             }
           }}
           placeholder={PROVIDER_HINT[provider]}
-          className="luster-mono luster-glass-input flex-1 px-3 py-2 text-[12.5px]"
+          className="luster-mono luster-glass-input luster-input-md flex-1"
         />
         <button
           type="button"
           onClick={connect}
           disabled={status.tone === "pending"}
-          className="luster-press h-9 rounded-md bg-luster-ink px-4 text-[12px] font-semibold text-luster-ink0 hover:bg-white disabled:opacity-60"
+          className="luster-btn-primary"
         >
           {status.tone === "pending" ? "…" : "Connect"}
         </button>
       </div>
 
-      <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.16em]">
+      <div className="flex items-center justify-between">
         <a
           href={PROVIDER_KEY_URL[provider]}
           target="_blank"
           rel="noreferrer"
-          className="text-luster-faint hover:text-luster-ink"
+          className="luster-btn-text"
         >
           Get a key →
         </a>
         {status.tone === "error" && (
-          <span className="text-luster-err">{status.message}</span>
+          <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-luster-err">
+            {status.message}
+          </span>
         )}
       </div>
     </div>

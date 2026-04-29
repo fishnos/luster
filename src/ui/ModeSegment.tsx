@@ -22,12 +22,11 @@ export interface ModeSegmentProps {
   onSelect: (mode: ModeName) => void;
 }
 
-export function ModeSegment({ active, modes, onSelect }: ModeSegmentProps) {
+export function ModeSegment({ active, onSelect }: ModeSegmentProps) {
   return (
     <div role="tablist" aria-label="Mode" className="flex items-center gap-1">
       {TABS.map(({ mode, label, Icon }) => {
         const isActive = active === mode;
-        const status = modes[mode].status;
         return (
           <button
             key={mode}
@@ -52,15 +51,6 @@ export function ModeSegment({ active, modes, onSelect }: ModeSegmentProps) {
                 isActive ? "bg-luster-ink" : "bg-transparent",
               )}
             />
-            {status === "pending" && (
-              <span className="ml-0.5 h-1 w-1 rounded-full bg-luster-ink luster-pulse" />
-            )}
-            {status === "error" && (
-              <span className="ml-0.5 h-1 w-1 rounded-full bg-luster-err" />
-            )}
-            {status === "rate-limited" && (
-              <span className="ml-0.5 h-1 w-1 rounded-full bg-luster-warn" />
-            )}
           </button>
         );
       })}

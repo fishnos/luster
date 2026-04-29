@@ -34,13 +34,13 @@ export function EditorHint({ hostKind }: EditorHintProps) {
           {hint.fallback}
         </p>
       )}
-      <div className="flex flex-wrap items-center gap-3 pt-1 text-[11px] uppercase tracking-[0.14em]">
+      <div className="flex flex-wrap items-center gap-3 pt-1">
         {hostKind === "google-docs" && (
           <>
             <button
               type="button"
               onClick={reload}
-              className="luster-press text-luster-ink hover:text-white"
+              className="luster-btn-text !text-luster-ink"
             >
               Reload tab →
             </button>
@@ -49,7 +49,7 @@ export function EditorHint({ hostKind }: EditorHintProps) {
               onClick={() => {
                 void runDocsDiagnostic();
               }}
-              className="luster-press text-luster-faint hover:text-luster-ink"
+              className="luster-btn-text"
             >
               Diagnose
             </button>
@@ -60,7 +60,7 @@ export function EditorHint({ hostKind }: EditorHintProps) {
             href={hint.link.href}
             target="_blank"
             rel="noreferrer"
-            className="luster-press text-luster-faint hover:text-luster-ink"
+            className="luster-btn-text"
           >
             {hint.link.label} →
           </a>

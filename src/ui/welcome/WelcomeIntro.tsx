@@ -32,7 +32,7 @@ export function WelcomeIntro({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.4, duration: 0.32 }}
-        className="luster-press absolute right-3 top-3 text-[10px] uppercase tracking-[0.18em] text-luster-faint hover:text-luster-ink-soft transition-colors"
+        className="luster-btn-text absolute right-3 top-3"
       >
         Skip
       </motion.button>

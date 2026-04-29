@@ -25,9 +25,7 @@ export function ModeInterrogation({
       <header className="flex items-baseline justify-between">
         <span className="luster-eyebrow">Curious reader</span>
         {info.provider && (
-          <span className="text-[10px] tracking-[0.04em] text-luster-faint">
-            {info.provider}
-          </span>
+          <span className="luster-eyebrow">{info.provider}</span>
         )}
       </header>
       <div className="text-[13px]">

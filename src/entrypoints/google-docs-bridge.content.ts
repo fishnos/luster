@@ -75,6 +75,22 @@ function installCanvasBridge(): void {
   let lastClearRectTime = 0;
   let pendingCandidateCount = 0;
 
+  const docGlyphs = new Map<string, RawGlyph>();
+  const DOC_GLYPHS_MAX = 80000;
+  const SCROLL_CONTAINER_SELECTORS = [
+    ".kix-appview-editor",
+    ".kix-rotatingtilemanager-content",
+    ".docs-editor-container",
+  ];
+
+  function getScrollOffset(): number {
+    for (const selector of SCROLL_CONTAINER_SELECTORS) {
+      const element = document.querySelector<HTMLElement>(selector);
+      if (element && element.scrollTop > 0) return element.scrollTop;
+    }
+    return window.scrollY || 0;
+  }
+
   const proto = CanvasRenderingContext2D.prototype;
   const originalFillText = proto.fillText;
   const originalStrokeText = proto.strokeText;
@@ -223,6 +239,7 @@ function installCanvasBridge(): void {
     const transformedY = matrix.b * x + matrix.d * y + matrix.f;
     const fontSize = parseFontSize(context.font);
     const verticalScale = Math.abs(matrix.d) || 1;
+    const finalFontSize = fontSize * verticalScale;
 
     let buffers = buffersByCanvas.get(canvas);
     if (!buffers) {
@@ -240,28 +257,28 @@ function installCanvasBridge(): void {
       text,
       x: transformedX,
       y: transformedY,
-      fontSize: fontSize * verticalScale,
+      fontSize: finalFontSize,
     });
+
+    const rect = canvas.getBoundingClientRect();
+    const absX = transformedX + rect.left;
+    const absY = transformedY + rect.top + getScrollOffset();
+    const lineBucket = Math.round(absY / Math.max(finalFontSize, 6));
+    const xBucket = Math.round(absX);
+    const key = `${xBucket}|${lineBucket}`;
+    docGlyphs.set(key, {
+      text,
+      x: absX,
+      y: absY,
+      fontSize: finalFontSize,
+    });
+
     scheduleReconstruct();
   }
 
   function readGlyphsForReconstruction(canvas: HTMLCanvasElement): RawGlyph[] {
     const buffers = buffersByCanvas.get(canvas);
     return buffers?.glyphs ?? [];
-  }
-
-  function dedupeGlyphs(source: RawGlyph[]): RawGlyph[] {
-    const seen = new Set<string>();
-    const unique: RawGlyph[] = [];
-    for (const glyph of source) {
-      const lineBucket = Math.round(glyph.y / Math.max(glyph.fontSize, 6));
-      const xBucket = Math.round(glyph.x);
-      const key = `${glyph.text}|${xBucket}|${lineBucket}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      unique.push(glyph);
-    }
-    return unique;
   }
 
   function totalGlyphCount(): number {
@@ -319,21 +336,21 @@ function installCanvasBridge(): void {
       trackedCanvases = trackedCanvases.filter(
         (canvas) => canvas.isConnected && isEditorCanvas(canvas),
       );
-      const merged: RawGlyph[] = [];
-      for (const canvas of trackedCanvases) {
-        const glyphs = readGlyphsForReconstruction(canvas);
-        if (glyphs.length === 0) continue;
-        const rect = canvas.getBoundingClientRect();
-        for (const glyph of glyphs) {
-          merged.push({
-            text: glyph.text,
-            x: glyph.x + rect.left,
-            y: glyph.y + rect.top,
-            fontSize: glyph.fontSize,
-          });
+      if (docGlyphs.size > DOC_GLYPHS_MAX) {
+        const excess = docGlyphs.size - DOC_GLYPHS_MAX;
+        const iterator = docGlyphs.keys();
+        for (let i = 0; i < excess; i += 1) {
+          const next = iterator.next();
+          if (next.done) break;
+          docGlyphs.delete(next.value);
         }
       }
-      const reconstruction = reconstructDocument(dedupeGlyphs(merged));
+      const reconstruction = reconstructDocument(
+        Array.from(docGlyphs.values()),
+      );
+      debug(
+        `reconstruct: docGlyphs=${docGlyphs.size} chars=${reconstruction.fullText.length} paras=${reconstruction.paragraphs.length}`,
+      );
       lastReconstructedTextLength = reconstruction.fullText.length;
       lastReconstructedParagraphCount = reconstruction.paragraphs.length;
       lastReconstructedSample = reconstruction.fullText.slice(0, 160);
@@ -370,7 +387,7 @@ function installCanvasBridge(): void {
       lastCanvasText = candidate;
       pendingCandidateText = "";
       pendingCandidateCount = 0;
-      emitBest(reconstruction.paragraphs, merged.length);
+      emitBest(reconstruction.paragraphs, docGlyphs.size);
     } catch (error) {
       logOnce("reconstruct", error);
     }
@@ -497,6 +514,9 @@ function installCanvasBridge(): void {
   function runDomFallback(): void {
     try {
       const paragraphs = readDomParagraphs();
+      debug(
+        `dom scan: ${paragraphs.length} paragraphs, ${paragraphs.join("\n\n").length} chars`,
+      );
       if (paragraphs.length === 0) return;
       const fullText = paragraphs.join("\n\n");
       if (fullText === lastDomEmittedText) return;
@@ -514,6 +534,9 @@ function installCanvasBridge(): void {
     const useDom = lastDomText.length > lastCanvasText.length;
     const fullText = useDom ? lastDomText : lastCanvasText;
     const paragraphs = useDom ? lastDomParagraphs : canvasParagraphs;
+    debug(
+      `emit ${useDom ? "DOM" : "CANVAS"} chars=${fullText.length} paras=${paragraphs.length} (canvas=${lastCanvasText.length} dom=${lastDomText.length})`,
+    );
     if (fullText.length === 0) return;
     if (fullText === lastEmittedText) return;
     lastEmittedText = fullText;
@@ -528,6 +551,12 @@ function installCanvasBridge(): void {
       glyphCount,
       generation: ++generation,
     });
+  }
+
+  function debug(message: string): void {
+    const flag = (window as unknown as { __lusterDebug?: boolean })
+      .__lusterDebug;
+    if (flag) console.log(`[Luster bridge] ${message}`);
   }
 
   function installDomObserver(): void {

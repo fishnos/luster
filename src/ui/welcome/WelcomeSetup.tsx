@@ -5,15 +5,8 @@ import { createKeyVault } from "@/core/keyVault";
 import { createBrowserLocalStorage } from "@/core/storageBackend";
 import { sendValidateKey } from "@/core/sendRequest";
 import { blurFadeIn, staggerContainer } from "@/ui/motion/staggered";
+import { ProviderTabs } from "@/ui/components/ProviderTabs";
 import { cn } from "@/ui/cn";
-
-const PROVIDERS: ProviderId[] = ["gemini", "anthropic", "openai"];
-
-const PROVIDER_LABEL: Record<ProviderId, string> = {
-  gemini: "Gemini",
-  anthropic: "Claude",
-  openai: "OpenAI",
-};
 
 const PROVIDER_HINT: Record<ProviderId, string> = {
   gemini: "AIza…",
@@ -80,34 +73,14 @@ export function WelcomeSetup({ onComplete }: WelcomeSetupProps) {
         </h2>
       </motion.div>
 
-      <motion.div
-        variants={blurFadeIn}
-        className="flex items-center gap-4 text-[13px]"
-      >
-        {PROVIDERS.map((entry) => {
-          const isActive = entry === provider;
-          return (
-            <button
-              key={entry}
-              type="button"
-              onClick={() => {
-                setProvider(entry);
-                setStatus({ tone: "idle" });
-              }}
-              className={cn(
-                "luster-press relative pb-1 font-medium transition-colors",
-                isActive
-                  ? "text-luster-ink"
-                  : "text-luster-faint hover:text-luster-muted",
-              )}
-            >
-              {PROVIDER_LABEL[entry]}
-              {isActive && (
-                <span className="absolute inset-x-0 bottom-0 h-px bg-luster-ink" />
-              )}
-            </button>
-          );
-        })}
+      <motion.div variants={blurFadeIn}>
+        <ProviderTabs
+          active={provider}
+          onSelect={(next) => {
+            setProvider(next);
+            setStatus({ tone: "idle" });
+          }}
+        />
       </motion.div>
 
       <motion.div variants={blurFadeIn} className="flex flex-col gap-1.5">
@@ -117,7 +90,7 @@ export function WelcomeSetup({ onComplete }: WelcomeSetupProps) {
             href={PROVIDER_KEY_URL[provider]}
             target="_blank"
             rel="noreferrer"
-            className="text-[10px] uppercase tracking-[0.16em] text-luster-faint hover:text-luster-ink"
+            className="luster-btn-text"
           >
             Get a key →
           </a>
@@ -134,7 +107,7 @@ export function WelcomeSetup({ onComplete }: WelcomeSetupProps) {
           }}
           placeholder={PROVIDER_HINT[provider]}
           autoFocus
-          className="luster-mono luster-glass-input w-full px-3 py-2.5 text-[13px]"
+          className="luster-mono luster-glass-input luster-input-md"
         />
         {status.tone === "error" && (
           <span className="text-[11.5px] text-luster-err">

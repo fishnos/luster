@@ -45,7 +45,13 @@ export function bootstrapAdapter(
   }
 
   const unsubscribeText = handle.onTextChange((text) => {
-    deps.controller.setStats(computeStats(text));
+    const stats = computeStats(text);
+    if ((window as unknown as { __lusterDebug?: boolean }).__lusterDebug) {
+      console.log(
+        `[Luster panel] text=${text.length} chars, stats: words=${stats.words} sentences=${stats.sentences}`,
+      );
+    }
+    deps.controller.setStats(stats);
   });
 
   let lastCaretPopupData: import("@/core/types").CaretPopupData | null = null;

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/ui/components/ui/button";
 import { Icon } from "@/ui/components/Icon";
 import { Switch } from "@/ui/components/ui/switch";
+import { ProviderTabs } from "@/ui/components/ProviderTabs";
 import { cn } from "@/ui/cn";
 import type { ModeName, ProviderId } from "@/core/types";
 import { createKeyVault, DEFAULT_MODELS } from "@/core/keyVault";
@@ -212,32 +213,11 @@ export function InlineSettings({
       </div>
 
       <Section label="Connect">
-        <div className="flex items-center gap-3 text-[12px]">
-          {PROVIDERS.map((entry) => {
-            const isActive = entry === provider;
-            return (
-              <button
-                key={entry}
-                type="button"
-                onClick={() => chooseProvider(entry)}
-                className={cn(
-                  "luster-press relative pb-1 text-[13px] font-medium transition-colors",
-                  isActive
-                    ? "text-luster-ink"
-                    : "text-luster-faint hover:text-luster-muted",
-                )}
-              >
-                {PROVIDER_LABEL[entry]}
-                {keyPresent[entry] && (
-                  <span className="ml-1 inline-block h-1 w-1 rounded-full bg-luster-ok align-middle" />
-                )}
-                {isActive && (
-                  <span className="absolute inset-x-0 bottom-0 h-px bg-luster-ink" />
-                )}
-              </button>
-            );
-          })}
-        </div>
+        <ProviderTabs
+          active={provider}
+          onSelect={chooseProvider}
+          keyPresent={keyPresent}
+        />
 
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
@@ -246,7 +226,7 @@ export function InlineSettings({
               href={PROVIDER_KEY_URL[provider]}
               target="_blank"
               rel="noreferrer"
-              className="text-[10px] uppercase tracking-[0.16em] text-luster-faint hover:text-luster-ink"
+              className="luster-btn-text"
             >
               Get a key →
             </a>
@@ -261,12 +241,12 @@ export function InlineSettings({
                   ? "•••••• (paste new to replace)"
                   : PROVIDER_KEY_HINT[provider]
               }
-              className="luster-mono luster-glass-input flex-1 px-3 py-2 text-[12.5px]"
+              className="luster-mono luster-glass-input luster-input-md flex-1"
             />
             <button
               type="button"
               onClick={saveKey}
-              className="luster-press h-9 rounded-md bg-luster-ink px-4 text-[12px] font-semibold text-luster-ink0 hover:bg-white"
+              className="luster-btn-primary"
             >
               Save
             </button>
@@ -274,7 +254,7 @@ export function InlineSettings({
               <button
                 type="button"
                 onClick={clearKey}
-                className="luster-press text-[11px] uppercase tracking-[0.14em] text-luster-faint hover:text-luster-ink"
+                className="luster-btn-secondary"
               >
                 Clear
               </button>
@@ -368,9 +348,9 @@ export function InlineSettings({
                 }))
               }
               onBlur={commitModel}
-              className="luster-mono luster-glass-input w-full px-3 py-2 text-[12.5px]"
+              className="luster-mono luster-glass-input luster-input-md"
             />
-            <div className="text-[10px] uppercase tracking-[0.14em] text-luster-faint">
+            <div className="luster-eyebrow">
               default {DEFAULT_MODELS[provider]}
             </div>
           </div>
@@ -382,18 +362,18 @@ export function InlineSettings({
               label="Keep per-document history"
               description="Local-only. Never includes your raw text."
             />
-            <div className="flex gap-3 text-[11px] uppercase tracking-[0.14em]">
+            <div className="flex gap-3">
               <button
                 type="button"
                 onClick={exportHistory}
-                className="luster-press text-luster-muted hover:text-luster-ink"
+                className="luster-btn-text"
               >
                 Export JSON
               </button>
               <button
                 type="button"
                 onClick={clearHistory}
-                className="luster-press text-luster-faint hover:text-luster-err"
+                className="luster-btn-text hover:!text-luster-err"
               >
                 Clear all
               </button>

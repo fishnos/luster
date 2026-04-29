@@ -50,14 +50,13 @@ export function CaretPopup({ caretRect, data, offsetY = 20 }: CaretPopupProps) {
       className="luster-root luster-card luster-mount px-3 py-2.5 shadow-lg border border-luster-border/50"
     >
       <div className="flex items-center gap-2 mb-1.5">
-        <Badge variant={variant as any} className="h-4 px-1 text-[9px] uppercase tracking-wider">
+        <Badge
+          variant={variant as any}
+          className="h-4 px-1 text-[10px] font-semibold uppercase tracking-[0.16em]"
+        >
           {data.label}
         </Badge>
-        {data.kind && (
-          <span className="text-[9px] uppercase tracking-[0.12em] text-luster-faint">
-            {data.kind}
-          </span>
-        )}
+        {data.kind && <span className="luster-eyebrow">{data.kind}</span>}
       </div>
       <div className="luster-serif text-[14px] leading-snug text-luster-ink">
         {data.text}
