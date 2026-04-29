@@ -73,10 +73,10 @@ function FullPanel({
           {state.view === "main" ? (
             <motion.div
               key="main"
-              initial={{ opacity: 0, x: -6 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -6 }}
-              transition={{ duration: 0.18, ease: EASE_OUT }}
+              initial={{ opacity: 0, filter: "blur(8px)", y: 4 }}
+              animate={{ opacity: 1, filter: "blur(0px)", y: 0 }}
+              exit={{ opacity: 0, filter: "blur(6px)", y: -4 }}
+              transition={{ duration: 0.28, ease: EASE_OUT }}
               className="space-y-3"
             >
               <MainView controller={controller} state={state} />
@@ -84,10 +84,10 @@ function FullPanel({
           ) : (
             <motion.div
               key="settings"
-              initial={{ opacity: 0, x: 6 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 6 }}
-              transition={{ duration: 0.18, ease: EASE_OUT }}
+              initial={{ opacity: 0, filter: "blur(8px)", y: 4 }}
+              animate={{ opacity: 1, filter: "blur(0px)", y: 0 }}
+              exit={{ opacity: 0, filter: "blur(6px)", y: -4 }}
+              transition={{ duration: 0.28, ease: EASE_OUT }}
             >
               <InlineSettings
                 onBack={() => controller.setView("main")}
@@ -184,7 +184,7 @@ function Header({
     >
       <Mark size={20} />
       <div className="flex items-baseline gap-2">
-        <span className="luster-serif text-[15px] tracking-[-0.01em] text-luster-ink">
+        <span className="luster-display text-[15px] text-luster-ink">
           Luster
         </span>
         <StatusDot status={state.modes[state.activeMode].status} />
@@ -436,7 +436,7 @@ function MinimizedBadge({
         zIndex: 2147483647,
       }}
       className={cn(
-        "luster-root flex items-center gap-2 h-9 px-3 rounded-full bg-white border border-luster-border shadow-overlay cursor-grab active:cursor-grabbing",
+        "luster-root luster-card flex items-center gap-2 h-9 px-3 rounded-full cursor-grab active:cursor-grabbing",
       )}
     >
       <Mark size={18} />

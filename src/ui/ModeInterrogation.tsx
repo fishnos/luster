@@ -7,9 +7,9 @@ const KIND_STYLES: Record<
   InterrogationOutput["questions"][number]["kind"],
   string
 > = {
-  intent: "border-[#ebd9b3] bg-luster-accent-soft text-luster-accent",
-  craft: "border-[#cfe1cd] bg-[#eef5ed] text-luster-ok",
-  reader: "border-[#f3d9a8] bg-[#fdf6e7] text-luster-warn",
+  intent: "border-luster-border-strong bg-white/[0.06] text-luster-ink",
+  craft: "border-luster-border bg-white/[0.04] text-luster-ok",
+  reader: "border-luster-border bg-white/[0.04] text-luster-warn",
 };
 
 export interface ModeInterrogationProps {
@@ -17,7 +17,10 @@ export interface ModeInterrogationProps {
   info: ModeOverlayInfo;
 }
 
-export function ModeInterrogation({ controller, info }: ModeInterrogationProps) {
+export function ModeInterrogation({
+  controller,
+  info,
+}: ModeInterrogationProps) {
   return (
     <div className="rounded-md border border-luster-border bg-luster-card">
       <div className="flex items-center justify-between border-b border-luster-border px-3 py-2 text-[10px] uppercase tracking-[0.14em] text-luster-faint">

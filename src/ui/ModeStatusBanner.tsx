@@ -8,7 +8,11 @@ export interface ModeStatusBannerProps {
   onReset?: () => void;
 }
 
-export function ModeStatusBanner({ info, idleText, onReset }: ModeStatusBannerProps) {
+export function ModeStatusBanner({
+  info,
+  idleText,
+  onReset,
+}: ModeStatusBannerProps) {
   if (info.status === "idle") {
     return <p className="text-[12px] text-luster-muted">{idleText}</p>;
   }
@@ -74,8 +78,8 @@ function Banner({
       className={cn(
         "rounded-md border px-2.5 py-2 text-[12px]",
         tone === "err"
-          ? "border-[#f3c4bd] bg-[#fdf3f1] text-luster-err"
-          : "border-[#f3d9a8] bg-[#fdf6e7] text-luster-warn",
+          ? "border-luster-border-strong bg-white/[0.03] text-luster-err"
+          : "border-luster-border bg-white/[0.03] text-luster-warn",
       )}
     >
       {children}
