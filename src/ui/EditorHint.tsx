@@ -1,5 +1,5 @@
 import type { HostKind } from "@/ui/state";
-import { Button } from "@/ui/components/Button";
+import { Button } from "@/ui/components/ui/button";
 import { Icon } from "@/ui/components/Icon";
 import { diagnoseGoogleDocs, probeBridge } from "@/adapters/google-docs";
 
@@ -38,7 +38,7 @@ export function EditorHint({ hostKind }: EditorHintProps) {
       <div className="flex flex-wrap items-center gap-2 pt-1">
         {hostKind === "google-docs" && (
           <>
-            <Button variant="primary" size="sm" onClick={reload}>
+            <Button variant="default" size="sm" onClick={reload}>
               Reload tab
             </Button>
             <Button

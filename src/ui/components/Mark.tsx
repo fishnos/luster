@@ -1,3 +1,4 @@
+import { browser } from "wxt/browser";
 import { cn } from "@/ui/cn";
 
 export interface MarkProps {
@@ -8,7 +9,7 @@ export interface MarkProps {
 export function Mark({ size = 22, className }: MarkProps) {
   return (
     <img
-      src={browser.runtime.getURL("/icon/128.png")}
+      src={browser.runtime.getURL("/icon/128.png" as never)}
       width={size}
       height={size}
       alt="Luster"

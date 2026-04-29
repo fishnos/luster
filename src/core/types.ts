@@ -50,3 +50,11 @@ export interface TokenUsage {
   input: number;
   output: number;
 }
+
+export interface CaretPopupData {
+  type: "critic" | "interrogation";
+  label: string;
+  text: string;
+  severity?: CriticIssue["severity"] | "info";
+  kind?: InterrogationOutput["questions"][number]["kind"];
+}

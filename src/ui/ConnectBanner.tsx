@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button } from "@/ui/components/Button";
+import { Button } from "@/ui/components/ui/button";
 import { Icon } from "@/ui/components/Icon";
 import { cn } from "@/ui/cn";
 import type { ProviderId } from "@/core/types";
@@ -143,8 +143,8 @@ export function ConnectBanner({ onConnected }: ConnectBannerProps) {
         )}
 
         <Button
-          variant="primary"
-          size="md"
+          variant="default"
+          size="sm"
           onClick={connect}
           disabled={status.tone === "pending"}
           className="w-full"

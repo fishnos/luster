@@ -1,4 +1,4 @@
-import type { ContentScriptContext } from "wxt/client";
+import type { ContentScriptContext } from "wxt/utils/content-script-context";
 import type { Adapter, AdapterId } from "@/adapters/types";
 import { mountOverlay } from "@/ui/mountOverlay";
 import { bootstrapAdapter } from "@/runtime/bootstrapAdapter";
@@ -43,7 +43,7 @@ export async function runContentScript(
     const dispose = bootstrapAdapter({
       adapter,
       controller: overlayMount.controller,
-      setCaretIssue: overlayMount.setCaretIssue,
+      setCaretPopup: overlayMount.setCaretPopup,
     });
     if (!dispose) return false;
     overlayMount.controller.setEditorAttached(true);

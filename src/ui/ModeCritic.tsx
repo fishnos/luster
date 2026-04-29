@@ -1,7 +1,7 @@
 import type { CriticIssue } from "@/core/types";
-import { SeverityBadge } from "@/ui/components/SeverityBadge";
+import { Badge } from "@/ui/components/ui/badge";
 import { ModeStatusBanner } from "@/ui/ModeStatusBanner";
-import type { ModeOverlayInfo } from "@/ui/state";
+import type { ModeOverlayInfo, OverlayController } from "@/ui/state";
 
 const SEVERITY_ORDER: CriticIssue["severity"][] = [
   "structural",
@@ -10,23 +10,32 @@ const SEVERITY_ORDER: CriticIssue["severity"][] = [
   "nit",
 ];
 
+const SEVERITY_TONE: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+  structural: "destructive",
+  clarity: "default",
+  rhythm: "secondary",
+  nit: "outline",
+};
+
 export interface ModeCriticProps {
+  controller: OverlayController;
   info: ModeOverlayInfo;
   sentence: string | null;
 }
 
-export function ModeCritic({ info, sentence }: ModeCriticProps) {
+export function ModeCritic({ controller, info, sentence }: ModeCriticProps) {
   return (
     <div className="rounded-md border border-luster-border bg-luster-card">
       <div className="flex items-center justify-between border-b border-luster-border px-3 py-2 text-[10px] uppercase tracking-[0.14em] text-luster-faint">
         <span>Critic · structure &amp; connection</span>
         {info.provider && <span>{info.provider}</span>}
       </div>
-      <div className="px-3 py-3 text-[13px]">
-        <ModeStatusBanner
-          info={info}
-          idleText="Finish a sentence to be critiqued."
-        />
+    <div className="px-3 py-3 text-[13px]">
+      <ModeStatusBanner
+        info={info}
+        idleText="Finish a sentence to be critiqued."
+        onReset={() => controller.resetMode("critic")}
+      />
         {info.status === "ok" && info.output?.mode === "critic" && (
           <CriticBody issues={info.output.result.issues} sentence={sentence} />
         )}
@@ -60,8 +69,10 @@ function CriticBody({
       {sortedIssues.map((issue, index) => (
         <li key={index} className="space-y-1.5">
           <div className="flex items-center gap-2">
-            <SeverityBadge severity={issue.severity} />
-            <span className="text-[13px] text-luster-ink">{issue.label}</span>
+            <Badge variant={SEVERITY_TONE[issue.severity] ?? "secondary"} className="h-4 px-1 text-[9px] uppercase">
+              {issue.severity}
+            </Badge>
+            <span className="text-[13px] text-luster-ink font-medium">{issue.label}</span>
           </div>
           {sentence && <SpanQuote sentence={sentence} issue={issue} />}
           {issue.suggestion && (

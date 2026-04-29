@@ -26,17 +26,25 @@ export function createAnthropicClient(
           ]
         : [{ type: "text", text: args.systemPrompt }];
 
+      const messages: Array<Record<string, unknown>> = [
+        {
+          role: "user",
+          content: [{ type: "text", text: args.userPrompt }],
+        },
+      ];
+      if (args.expectJson) {
+        messages.push({
+          role: "assistant",
+          content: [{ type: "text", text: "{" }],
+        });
+      }
+
       const body: Record<string, unknown> = {
         model: args.model,
         max_tokens: args.maxTokens ?? 1024,
         temperature: args.temperature ?? 0.4,
         system: systemBlocks,
-        messages: [
-          {
-            role: "user",
-            content: [{ type: "text", text: args.userPrompt }],
-          },
-        ],
+        messages,
       };
 
       const response = await fetcher(API_URL, {
@@ -54,7 +62,8 @@ export function createAnthropicClient(
       }
 
       const json = (await response.json()) as AnthropicResponse;
-      const text = extractText(json);
+      const rawText = extractText(json);
+      const text = args.expectJson ? `{${rawText}` : rawText;
       const inputTokens =
         (json.usage?.input_tokens ?? 0) +
         (json.usage?.cache_read_input_tokens ?? 0) +

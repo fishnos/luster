@@ -14,20 +14,15 @@ import {
   buildUserPrompt,
 } from "@/core/modes/prompts/critic";
 
-const CriticIssueSchema = z
-  .object({
-    severity: z.enum(["structural", "clarity", "rhythm", "nit"]),
-    span: z.object({
-      start: z.number().int().min(0),
-      end: z.number().int().min(0),
-    }),
-    label: z.string().min(1).max(120),
-    suggestion: z.string().min(1).max(240).optional(),
-  })
-  .refine((issue) => issue.span.end > issue.span.start, {
-    message: "span.end must be greater than span.start",
-    path: ["span"],
-  });
+const CriticIssueSchema = z.object({
+  severity: z.enum(["structural", "clarity", "rhythm", "nit"]),
+  span: z.object({
+    start: z.coerce.number().int().min(0),
+    end: z.coerce.number().int().min(0),
+  }),
+  label: z.string().min(1).max(160),
+  suggestion: z.string().min(1).max(280).optional(),
+});
 
 const CriticOutputSchema = z.object({
   issues: z.array(CriticIssueSchema).max(8).default([]),
@@ -83,7 +78,7 @@ export function createCriticEngine(deps: CriticEngineDeps): CriticEngine {
           contextBefore: input.contextBefore,
         }),
         expectJson: true,
-        maxTokens: 2048,
+        maxTokens: 4096,
         temperature: 0.2,
       });
 
@@ -111,15 +106,24 @@ export function createCriticEngine(deps: CriticEngineDeps): CriticEngine {
       const validIssues: CriticIssue[] = [];
       let droppedIssueCount = 0;
       for (const issue of parsed.data.issues) {
-        const inBounds =
-          issue.span.start >= 0 &&
-          issue.span.end <= sentenceLength &&
-          issue.span.end > issue.span.start;
-        if (inBounds) {
-          validIssues.push(issue);
-        } else {
+        const clampedStart = Math.max(
+          0,
+          Math.min(issue.span.start, Math.max(0, sentenceLength - 1)),
+        );
+        const clampedEnd = Math.max(
+          clampedStart + 1,
+          Math.min(issue.span.end, sentenceLength),
+        );
+        if (sentenceLength === 0) {
           droppedIssueCount += 1;
+          continue;
         }
+        validIssues.push({
+          severity: issue.severity,
+          span: { start: clampedStart, end: clampedEnd },
+          label: issue.label,
+          suggestion: issue.suggestion,
+        });
       }
 
       return {

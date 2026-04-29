@@ -1,12 +1,14 @@
 import type { ModeOverlayInfo } from "@/ui/state";
+import { Button } from "@/ui/components/ui/button";
 import { cn } from "@/ui/cn";
 
 export interface ModeStatusBannerProps {
   info: ModeOverlayInfo;
   idleText: string;
+  onReset?: () => void;
 }
 
-export function ModeStatusBanner({ info, idleText }: ModeStatusBannerProps) {
+export function ModeStatusBanner({ info, idleText, onReset }: ModeStatusBannerProps) {
   if (info.status === "idle") {
     return <p className="text-[12px] text-luster-muted">{idleText}</p>;
   }
@@ -35,6 +37,26 @@ export function ModeStatusBanner({ info, idleText }: ModeStatusBannerProps) {
         Paused to stay under your rate limit
         {seconds > 0 ? ` — ${seconds}s` : ""}.
       </Banner>
+    );
+  }
+  if (info.status === "ok") {
+    return (
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-luster-muted">
+          <span className="h-1.5 w-1.5 rounded-full bg-luster-ok" />
+          Ready
+        </div>
+        {onReset && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onReset}
+            className="h-auto p-0 text-[10px] uppercase tracking-widest text-luster-faint hover:text-luster-accent transition-colors"
+          >
+            Clear
+          </Button>
+        )}
+      </div>
     );
   }
   return null;

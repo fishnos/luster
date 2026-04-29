@@ -11,14 +11,18 @@ import { createKeyVault } from "@/core/keyVault";
 import { createBrowserLocalStorage } from "@/core/storageBackend";
 
 const CONTEXT_PARAGRAPH_WINDOW = 3;
-const COMMIT_QUIET_MS = 1500;
+const COMMIT_QUIET_MS_BY_MODE: Record<ModeName, number> = {
+  critic: 1200,
+  interrogation: 700,
+  reading: 700,
+};
 
 export interface BootstrapAdapterDeps {
   adapter: Adapter;
   controller: OverlayController;
-  setCaretIssue: (
+  setCaretPopup: (
     rect: DOMRect | null,
-    issue: import("@/core/types").CriticIssue | null,
+    data: import("@/core/types").CaretPopupData | null,
   ) => void;
   hostDocument?: Document;
   hostWindow?: Window;
@@ -48,22 +52,33 @@ export function bootstrapAdapter(
     deps.controller.setStats(computeStats(text));
   });
 
-  const unsubscribeCaret = handle.onCaretChange((rect) => {
-    if (!rect) return;
-    const state = deps.controller.getState();
+  let lastCaretPopupData: import("@/core/types").CaretPopupData | null = null;
+  const handleCaretChange = (rect: DOMRect | null) => {
+    if (!rect) {
+      if (lastCaretPopupData) {
+        lastCaretPopupData = null;
+        deps.setCaretPopup(null, null);
+      }
+      return;
+    }
     const panelWidth = 360;
     const padding = 24;
     let x = rect.right + padding;
-
     if (x + panelWidth > window.innerWidth - padding) {
       x = rect.left - panelWidth - padding;
     }
-
-    deps.controller.setPosition({
+    deps.controller.setCaretPosition({
       x: Math.max(padding, x),
       y: Math.max(padding, rect.top - 10),
     });
-  });
+    if (lastCaretPopupData) {
+      deps.setCaretPopup(rect, lastCaretPopupData);
+    }
+  };
+  const unsubscribeCaret =
+    typeof handle.onCaretChange === "function"
+      ? handle.onCaretChange(handleCaretChange)
+      : () => {};
 
   let pendingCommit: { mode: ModeName; delta: CommitDelta } | null = null;
   let commitTimer: ReturnType<typeof setTimeout> | null = null;
@@ -100,12 +115,13 @@ export function bootstrapAdapter(
 
   const unsubscribeCommit = handle.onCommit((delta) => {
     const state = deps.controller.getState();
-    if (state.minimized) return;
-
     const activeMode = state.activeMode;
     pendingCommit = { mode: activeMode, delta };
     if (commitTimer) clearTimeout(commitTimer);
-    commitTimer = setTimeout(flushPendingCommit, COMMIT_QUIET_MS);
+    commitTimer = setTimeout(
+      flushPendingCommit,
+      COMMIT_QUIET_MS_BY_MODE[activeMode] ?? 1200,
+    );
   });
 
   async function runForMode(mode: ModeName, delta: CommitDelta): Promise<void> {
@@ -147,9 +163,8 @@ export function bootstrapAdapter(
       } else {
         deps.controller.setModeError(mode, result.error ?? result.reason);
       }
-      if (mode === "critic") {
-        deps.setCaretIssue(null, null);
-      }
+      lastCaretPopupData = null;
+      deps.setCaretPopup(null, null);
       return;
     }
 
@@ -158,12 +173,37 @@ export function bootstrapAdapter(
     if (mode === "interrogation" && result.output.mode === "interrogation") {
       const lastQuestion = result.output.result.questions.at(-1);
       lastQuestionKind = lastQuestion?.kind ?? lastQuestionKind;
+
+      if (lastQuestion) {
+        const caretRect = handle.caretRect();
+        lastCaretPopupData = {
+          type: "interrogation",
+          label: "Reader",
+          text: lastQuestion.text,
+          kind: lastQuestion.kind,
+        };
+        deps.setCaretPopup(caretRect, lastCaretPopupData);
+      } else {
+        lastCaretPopupData = null;
+        deps.setCaretPopup(null, null);
+      }
     }
 
     if (mode === "critic" && result.output.mode === "critic") {
       const topIssue = result.output.result.issues[0] ?? null;
       const caretRect = handle.caretRect();
-      deps.setCaretIssue(caretRect, topIssue);
+      if (topIssue) {
+        lastCaretPopupData = {
+          type: "critic",
+          label: "Critique",
+          text: topIssue.suggestion || topIssue.label,
+          severity: topIssue.severity,
+        };
+        deps.setCaretPopup(caretRect, lastCaretPopupData);
+      } else {
+        lastCaretPopupData = null;
+        deps.setCaretPopup(null, null);
+      }
     }
   }
 

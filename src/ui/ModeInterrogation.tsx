@@ -1,6 +1,6 @@
 import type { InterrogationOutput } from "@/core/types";
 import { ModeStatusBanner } from "@/ui/ModeStatusBanner";
-import type { ModeOverlayInfo } from "@/ui/state";
+import type { ModeOverlayInfo, OverlayController } from "@/ui/state";
 import { cn } from "@/ui/cn";
 
 const KIND_STYLES: Record<
@@ -13,10 +13,11 @@ const KIND_STYLES: Record<
 };
 
 export interface ModeInterrogationProps {
+  controller: OverlayController;
   info: ModeOverlayInfo;
 }
 
-export function ModeInterrogation({ info }: ModeInterrogationProps) {
+export function ModeInterrogation({ controller, info }: ModeInterrogationProps) {
   return (
     <div className="rounded-md border border-luster-border bg-luster-card">
       <div className="flex items-center justify-between border-b border-luster-border px-3 py-2 text-[10px] uppercase tracking-[0.14em] text-luster-faint">
@@ -27,6 +28,7 @@ export function ModeInterrogation({ info }: ModeInterrogationProps) {
         <ModeStatusBanner
           info={info}
           idleText="Finish a sentence and a question will appear."
+          onReset={() => controller.resetMode("interrogation")}
         />
         {info.status === "ok" && info.output?.mode === "interrogation" && (
           <ul className="luster-cross space-y-3">

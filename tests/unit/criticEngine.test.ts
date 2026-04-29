@@ -61,13 +61,11 @@ describe("createCriticEngine.run", () => {
 
     const userPrompt = (ai.runForMode.mock.calls[0]![0] as AiCallRequest)
       .userPrompt;
-    expect(userPrompt).toContain("## Recent context");
+    expect(userPrompt).toContain("## Context (Prior Flow)");
     expect(userPrompt).toContain("A door creaked open.");
-    expect(userPrompt).toContain("## Containing paragraph");
+    expect(userPrompt).toContain("## Containing Paragraph");
     expect(userPrompt).toContain(sampleDelta.paragraph);
-    expect(userPrompt).toMatch(
-      /## Latest sentence \(offset reference[^\n]*\)\n/,
-    );
+    expect(userPrompt).toMatch(/## Target Sentence \(Focus[^\n]*\)\n/);
     expect(userPrompt).toContain(sampleSentence);
   });
 
@@ -123,7 +121,7 @@ describe("createCriticEngine.run", () => {
     expect(result.droppedIssueCount).toBe(0);
   });
 
-  it("drops issues whose span is out of the sentence bounds and counts them", async () => {
+  it("clamps issues whose span overruns the sentence bounds", async () => {
     const sentenceLength = sampleSentence.length;
     const text = JSON.stringify({
       issues: [
@@ -135,7 +133,7 @@ describe("createCriticEngine.run", () => {
         {
           severity: "structural",
           span: { start: sentenceLength + 5, end: sentenceLength + 20 },
-          label: "bogus span",
+          label: "overrun span",
         },
       ],
     });
@@ -151,9 +149,13 @@ describe("createCriticEngine.run", () => {
     const result = await engine.run({ delta: sampleDelta, contextBefore: "" });
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("expected ok");
-    expect(result.output.issues).toHaveLength(1);
+    expect(result.output.issues).toHaveLength(2);
     expect(result.output.issues[0]!.label).toBe("weak adverb");
-    expect(result.droppedIssueCount).toBe(1);
+    const clamped = result.output.issues[1]!;
+    expect(clamped.span.start).toBeGreaterThanOrEqual(0);
+    expect(clamped.span.end).toBeLessThanOrEqual(sentenceLength);
+    expect(clamped.span.end).toBeGreaterThan(clamped.span.start);
+    expect(result.droppedIssueCount).toBe(0);
   });
 
   it("returns parse-error when severity is not in the enum", async () => {
@@ -173,7 +175,7 @@ describe("createCriticEngine.run", () => {
     expect(result).toMatchObject({ ok: false, reason: "parse-error" });
   });
 
-  it("returns parse-error when an issue has end <= start", async () => {
+  it("clamps an issue with end <= start instead of failing", async () => {
     const text = JSON.stringify({
       issues: [{ severity: "rhythm", span: { start: 10, end: 5 }, label: "x" }],
     });
@@ -187,7 +189,10 @@ describe("createCriticEngine.run", () => {
     const engine = createCriticEngine({ aiClient: ai });
 
     const result = await engine.run({ delta: sampleDelta, contextBefore: "" });
-    expect(result).toMatchObject({ ok: false, reason: "parse-error" });
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("expected ok");
+    const issue = result.output.issues[0]!;
+    expect(issue.span.end).toBeGreaterThan(issue.span.start);
   });
 
   it("forwards a rate-limited failure with retry hint", async () => {

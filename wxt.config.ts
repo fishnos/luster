@@ -45,5 +45,19 @@ export default defineConfig({
         strict_min_version: "115.0",
       },
     },
+    web_accessible_resources: [
+      {
+        resources: ["icon/*.png", "icons/*.png"],
+        matches: [
+          "https://docs.google.com/*",
+          "https://www.notion.so/*",
+          "https://*.notion.site/*",
+          "https://*.substack.com/*",
+          "https://medium.com/*",
+          "https://*.medium.com/*",
+          "https://*.ghost.io/*",
+        ],
+      },
+    ],
   },
 });

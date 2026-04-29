@@ -1,7 +1,9 @@
 import { useCallback, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import type { ModeName } from "@/core/types";
-import { Button } from "@/ui/components/Button";
+import { Button } from "@/ui/components/ui/button";
+import { ScrollArea } from "@/ui/components/ui/scroll-area";
+import { Badge } from "@/ui/components/ui/badge";
 import { Icon } from "@/ui/components/Icon";
 import { Mark } from "@/ui/components/Mark";
 import { StatusDot } from "@/ui/components/StatusDot";
@@ -25,6 +27,7 @@ export interface OverlayProps {
 
 export function Overlay({ controller }: OverlayProps) {
   const state = useOverlayState(controller);
+  if (state.closed) return null;
 
   return (
     <AnimatePresence mode="wait" initial={false}>
@@ -63,7 +66,7 @@ function FullPanel({
       className="luster-root luster-card text-luster-ink overflow-hidden flex flex-col"
     >
       <Header controller={controller} state={state} />
-      <div className="flex-1 overflow-y-auto px-3 py-3 luster-panel-scroll">
+      <ScrollArea className="flex-1 px-3 py-3">
         <AnimatePresence mode="wait" initial={false}>
           {state.view === "main" ? (
             <motion.div
@@ -95,7 +98,7 @@ function FullPanel({
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
+      </ScrollArea>
     </motion.div>
   );
 }
@@ -147,7 +150,6 @@ function Header({
       const nextX = origin.startX + (event.clientX - origin.pointerX);
       const nextY = origin.startY + (event.clientY - origin.pointerY);
       controller.setPosition({ x: Math.max(0, nextX), y: Math.max(0, nextY) });
-      controller.setPinned(true);
     },
     [controller],
   );
@@ -187,16 +189,6 @@ function Header({
       </div>
 
       <div className="ml-auto flex items-center gap-1">
-        {state.isPinned && (
-          <Button
-            variant="icon"
-            aria-label="Follow cursor"
-            className="text-luster-accent"
-            onClick={() => controller.setPinned(false)}
-          >
-            <Icon name="pin" size={14} className="rotate-45" />
-          </Button>
-        )}
         <span
           className="luster-num text-[11.5px] text-luster-muted mr-1.5 leading-none"
           aria-label={`${wordCount} words in document`}
@@ -206,21 +198,14 @@ function Header({
           </span>{" "}
           <span className="text-luster-faint">words</span>
         </span>
-        {state.hostKind === "google-docs" && (
-          <Button
-            variant="icon"
-            aria-label="Diagnose Docs bridge"
-            onClick={() => void runDocsDiagnostic()}
-          >
-            <Icon name="sparkle" size={14} />
-          </Button>
-        )}
         <Button
-          variant="icon"
+          variant="ghost"
+          size="icon"
           aria-label={
             state.view === "settings" ? "Back to main" : "Open settings"
           }
           aria-pressed={state.view === "settings"}
+          className="h-8 w-8"
           onClick={() =>
             controller.setView(state.view === "settings" ? "main" : "settings")
           }
@@ -231,11 +216,13 @@ function Header({
           />
         </Button>
         <Button
-          variant="icon"
+          variant="ghost"
+          size="icon"
           aria-label="Minimize Luster"
+          className="h-8 w-8 hover:text-luster-err"
           onClick={() => controller.setMinimized(true)}
         >
-          <Icon name="minimize" size={14} />
+          <Icon name="close" size={14} />
         </Button>
       </div>
     </div>
@@ -290,13 +277,17 @@ function MainView({
           transition={{ duration: 0.16, ease: EASE_OUT }}
         >
           {state.activeMode === "reading" && (
-            <ModeReading info={state.modes.reading} />
+            <ModeReading controller={controller} info={state.modes.reading} />
           )}
           {state.activeMode === "interrogation" && (
-            <ModeInterrogation info={state.modes.interrogation} />
+            <ModeInterrogation
+              controller={controller}
+              info={state.modes.interrogation}
+            />
           )}
           {state.activeMode === "critic" && (
             <ModeCritic
+              controller={controller}
               info={state.modes.critic}
               sentence={state.criticSentence}
             />
@@ -351,17 +342,91 @@ function MinimizedBadge({
   state: OverlayState;
 }) {
   const status = state.modes[state.activeMode].status;
+  const wordCount = state.stats?.words ?? 0;
+
+  const dragOriginRef = useRef<{
+    pointerX: number;
+    pointerY: number;
+    startX: number;
+    startY: number;
+    moved: boolean;
+  } | null>(null);
+  const justDraggedRef = useRef(false);
+
+  const onPointerDown = useCallback(
+    (event: React.PointerEvent<HTMLButtonElement>) => {
+      if (event.button !== 0) return;
+      const target = event.currentTarget;
+      if (typeof target.setPointerCapture === "function") {
+        target.setPointerCapture(event.pointerId);
+      }
+      dragOriginRef.current = {
+        pointerX: event.clientX,
+        pointerY: event.clientY,
+        startX: state.position.x,
+        startY: state.position.y,
+        moved: false,
+      };
+      justDraggedRef.current = false;
+    },
+    [state.position.x, state.position.y],
+  );
+
+  const onPointerMove = useCallback(
+    (event: React.PointerEvent<HTMLButtonElement>) => {
+      const origin = dragOriginRef.current;
+      if (!origin) return;
+      const deltaX = event.clientX - origin.pointerX;
+      const deltaY = event.clientY - origin.pointerY;
+      if (!origin.moved && Math.hypot(deltaX, deltaY) < 4) return;
+      origin.moved = true;
+      const nextX = origin.startX + deltaX;
+      const nextY = origin.startY + deltaY;
+      controller.setPosition({ x: Math.max(0, nextX), y: Math.max(0, nextY) });
+    },
+    [controller],
+  );
+
+  const onPointerUp = useCallback(
+    (event: React.PointerEvent<HTMLButtonElement>) => {
+      const target = event.currentTarget;
+      if (
+        typeof target.hasPointerCapture === "function" &&
+        target.hasPointerCapture(event.pointerId) &&
+        typeof target.releasePointerCapture === "function"
+      ) {
+        target.releasePointerCapture(event.pointerId);
+      }
+      const moved = dragOriginRef.current?.moved ?? false;
+      justDraggedRef.current = moved;
+      dragOriginRef.current = null;
+    },
+    [],
+  );
+
   return (
     <motion.button
       type="button"
       aria-label="Open Luster"
-      onClick={() => controller.setMinimized(false)}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerUp}
+      onClick={(event) => {
+        if (justDraggedRef.current) {
+          event.preventDefault();
+          event.stopPropagation();
+          justDraggedRef.current = false;
+          return;
+        }
+        controller.setMinimized(false);
+      }}
       initial={{ opacity: 0, scale: 0.85 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.85 }}
       transition={{ duration: 0.18, ease: EASE_OUT }}
-      whileTap={{ scale: 0.92 }}
-      whileHover={{ scale: 1.04 }}
+      whileTap={{ scale: 0.95 }}
+      whileHover={{ scale: 1.02 }}
       style={{
         position: "fixed",
         left: state.position.x,
@@ -369,14 +434,17 @@ function MinimizedBadge({
         zIndex: 2147483647,
       }}
       className={cn(
-        "luster-root flex h-10 w-10 items-center justify-center rounded-full bg-white border border-luster-border shadow-overlay",
+        "luster-root flex items-center gap-2 h-9 px-3 rounded-full bg-white border border-luster-border shadow-overlay cursor-grab active:cursor-grabbing",
       )}
     >
-      <Mark size={20} />
+      <Mark size={18} />
+      <span className="luster-num text-[12px] font-medium text-luster-ink">
+        {wordCount.toLocaleString()}
+      </span>
       {status !== "idle" && (
         <span
           className={cn(
-            "absolute -right-0.5 -top-0.5 inline-block h-2 w-2 rounded-full",
+            "inline-block h-1.5 w-1.5 rounded-full",
             status === "pending" && "bg-luster-accent luster-pulse",
             status === "error" && "bg-luster-err",
             status === "rate-limited" && "bg-luster-warn",

@@ -16,12 +16,11 @@ export function StatsPanel({ stats }: StatsPanelProps) {
   const cells: { label: string; value: string }[] = [
     { label: "words", value: formatNumber(stats.words) },
     { label: "sentences", value: String(stats.sentences) },
-    { label: "avg", value: stats.avgSentenceWords.toFixed(1) },
   ];
 
   return (
     <div className="rounded-md border border-luster-border bg-luster-surface/70">
-      <div className="grid grid-cols-3 divide-x divide-luster-border">
+      <div className="grid grid-cols-2 divide-x divide-luster-border">
         {cells.map((cell) => (
           <div
             key={cell.label}

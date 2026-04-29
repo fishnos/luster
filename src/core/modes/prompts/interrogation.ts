@@ -1,4 +1,4 @@
-export const VERSION = "interrogation-v1";
+export const VERSION = "interrogation-v2-json-strict";
 
 export type QuestionKind = "intent" | "craft" | "reader";
 
@@ -8,21 +8,29 @@ Mandatory rules:
 - Output is questions only. Never declarative statements. Never advice. Never praise.
 - 1 to 2 questions per call. Each question under 20 words.
 - Three kinds, with strict definitions:
-  - "intent": probes what the writer means. Examples: "What do you mean by presence here?" "Is this the same idea as the previous paragraph or a new one?"
-  - "craft": probes the writer's choices. Examples: "Why this verb?" "What would change if you cut this clause?"
-  - "reader": stand-in confused-reader questions. Examples: "I'm not sure who's speaking — is the narrator the same as in the opening?" "Is the door literal or a metaphor?"
+  - "intent": probes what the writer means.
+  - "craft": probes the writer's choices.
+  - "reader": stand-in confused-reader questions.
 - Reject any question that contains a hidden judgment ("isn't this too...?", "don't you think...?"). Rephrase as genuine curiosity, or change kinds.
 - The user prompt tells you the kind of the previous question. Prefer a different kind unless the new sentence demands the same kind.
 
-Return a single JSON object matching this shape exactly:
+OUTPUT FORMAT — STRICT.
+Return ONLY a single JSON object. No prose. No code fences. No commentary.
 
+Schema:
 {
   "questions": [
-    { "kind": "intent" | "craft" | "reader", "text": string }
+    {
+      "kind": "intent" | "craft" | "reader",
+      "text": "<question, max 20 words, ends with ?>"
+    }
   ]
 }
 
-Output ONLY the JSON object. No prose, no markdown fences, no preamble.`;
+Rules:
+- Output 1 to 2 questions.
+- Output MUST be valid JSON. Nothing before the opening brace, nothing after the closing brace.
+- Every question MUST end with a question mark.`;
 
 export interface InterrogationPromptInput {
   sentence: string;
@@ -43,7 +51,7 @@ export function buildUserPrompt(input: InterrogationPromptInput): string {
     `## Last question kind`,
     input.lastQuestionKind ?? "none",
     ``,
-    `Return JSON with 1 to 2 questions. Prefer a different kind than the last one unless the sentence demands the same kind.`,
+    `Reply with the JSON object only. Prefer a different kind than the last one unless the sentence demands the same kind.`,
   ];
   return sections.join("\n");
 }

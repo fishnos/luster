@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "@/ui/theme.css";
 import { Mark } from "@/ui/components/Mark";
-import { Button } from "@/ui/components/Button";
+import { Button } from "@/ui/components/ui/button";
 import { Icon } from "@/ui/components/Icon";
 import { createKeyVault } from "@/core/keyVault";
 import { createBrowserLocalStorage } from "@/core/storageBackend";
@@ -110,8 +110,8 @@ function Popup() {
       </div>
 
       <Button
-        variant="primary"
-        size="md"
+        variant="default"
+        size="sm"
         onClick={openOptions}
         className="w-full"
       >

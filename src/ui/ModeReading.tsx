@@ -1,12 +1,13 @@
 import type { ReadingOutput } from "@/core/types";
 import { ModeStatusBanner } from "@/ui/ModeStatusBanner";
-import type { ModeOverlayInfo } from "@/ui/state";
+import type { ModeOverlayInfo, OverlayController } from "@/ui/state";
 
 export interface ModeReadingProps {
+  controller: OverlayController;
   info: ModeOverlayInfo;
 }
 
-export function ModeReading({ info }: ModeReadingProps) {
+export function ModeReading({ controller, info }: ModeReadingProps) {
   return (
     <div className="rounded-md border border-luster-border bg-luster-card">
       <div className="flex items-center justify-between border-b border-luster-border px-3 py-2 text-[10px] uppercase tracking-[0.14em] text-luster-faint">
@@ -17,6 +18,7 @@ export function ModeReading({ info }: ModeReadingProps) {
         <ModeStatusBanner
           info={info}
           idleText="Finish a paragraph to get an editor's read-back."
+          onReset={() => controller.resetMode("reading")}
         />
         {info.status === "ok" && info.output?.mode === "reading" && (
           <ReadingBody output={info.output.result} />

@@ -144,7 +144,6 @@ export const googleDocsAdapter: Adapter = {
     const commitCallbacks = new Set<(delta: CommitDelta) => void>();
     const textChangeCallbacks = new Set<(text: string) => void>();
     const caretChangeCallbacks = new Set<(rect: DOMRect | null) => void>();
-    let lastCaretRect: DOMRect | null = null;
 
     const unsubscribeStream = textStream.onCommit((delta) => {
       for (const callback of commitCallbacks) callback(delta);

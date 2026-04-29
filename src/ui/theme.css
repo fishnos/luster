@@ -6,6 +6,26 @@
   :host,
   :root {
     color-scheme: light;
+    --background: 40 20% 98%;
+    --foreground: 24 10% 10%;
+    --card: 40 20% 100%;
+    --card-foreground: 24 10% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 24 10% 10%;
+    --primary: 40 54% 41%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 40 18% 94%;
+    --secondary-foreground: 24 10% 10%;
+    --muted: 40 10% 95%;
+    --muted-foreground: 40 5% 45%;
+    --accent: 40 54% 41%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 40 18% 88%;
+    --input: 40 18% 88%;
+    --ring: 40 54% 41%;
+    --radius: 0.5rem;
   }
 }
 

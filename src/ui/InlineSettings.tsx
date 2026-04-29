@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { Button } from "@/ui/components/Button";
+import { Button } from "@/ui/components/ui/button";
 import { Icon } from "@/ui/components/Icon";
-import { Switch } from "@/ui/components/Switch";
+import { Switch } from "@/ui/components/ui/switch";
 import { cn } from "@/ui/cn";
 import type { ModeName, ProviderId } from "@/core/types";
 import { createKeyVault, DEFAULT_MODELS } from "@/core/keyVault";
@@ -199,7 +199,7 @@ export function InlineSettings({
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-1 text-[12px] text-luster-muted">
-        <Button variant="icon" aria-label="Back" onClick={onBack}>
+        <Button variant="ghost" size="icon" aria-label="Back" onClick={onBack}>
           <Icon name="back" size={14} />
         </Button>
         <span className="font-medium uppercase tracking-[0.14em] text-[10px] text-luster-faint">
@@ -258,11 +258,11 @@ export function InlineSettings({
             }
             className="luster-mono flex-1 rounded-md border border-luster-border bg-luster-card px-2.5 py-1.5 text-[12px] text-luster-ink placeholder:text-luster-faint focus:border-luster-accent focus:outline-none"
           />
-          <Button variant="primary" size="md" onClick={saveKey}>
+          <Button variant="default" size="sm" onClick={saveKey}>
             Save
           </Button>
           {keyPresent[provider] && (
-            <Button variant="ghost" size="md" onClick={clearKey}>
+            <Button variant="ghost" size="sm" onClick={clearKey}>
               Clear
             </Button>
           )}
@@ -414,7 +414,11 @@ function Toggle({
         )}
       </div>
       <div className="pt-0.5">
-        <Switch checked={checked} onChange={onChange} ariaLabel={label} />
+        <Switch
+          checked={checked}
+          onCheckedChange={onChange}
+          aria-label={label}
+        />
       </div>
     </div>
   );

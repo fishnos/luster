@@ -21,6 +21,7 @@ export interface OverlayState {
   view: OverlayView;
   minimized: boolean;
   position: { x: number; y: number };
+  caretPosition: { x: number; y: number } | null;
   stats: DocStats | null;
   modes: Record<ModeName, ModeOverlayInfo>;
   criticSentence: string | null;
@@ -31,6 +32,7 @@ export interface OverlayState {
   editorSearchStuck: boolean;
   hostKind: HostKind;
   isPinned: boolean;
+  closed: boolean;
 }
 
 export type HostKind = "unknown" | "google-docs" | "notion" | "prosemirror";
@@ -43,6 +45,7 @@ export function createInitialOverlayState(): OverlayState {
     view: "main",
     minimized: false,
     position: { x: window.innerWidth - 400, y: 96 },
+    caretPosition: null,
     stats: null,
     modes: {
       reading: { ...INITIAL_MODE_INFO },
@@ -57,6 +60,7 @@ export function createInitialOverlayState(): OverlayState {
     editorSearchStuck: false,
     hostKind: "unknown",
     isPinned: false,
+    closed: false,
   };
 }
 
@@ -67,6 +71,7 @@ export interface OverlayController {
   setView: (view: OverlayView) => void;
   setMinimized: (minimized: boolean) => void;
   setPosition: (position: { x: number; y: number }) => void;
+  setCaretPosition: (position: { x: number; y: number } | null) => void;
   setStats: (stats: DocStats) => void;
   markModePending: (mode: ModeName) => void;
   setModeOutput: (
@@ -83,6 +88,7 @@ export interface OverlayController {
   setEditorSearchStuck: (value: boolean) => void;
   setHostKind: (value: HostKind) => void;
   setPinned: (value: boolean) => void;
+  setClosed: (value: boolean) => void;
   resetMode: (mode: ModeName) => void;
   reset: () => void;
 }
@@ -149,6 +155,9 @@ export function createOverlayController(): OverlayController {
 
     setPosition(position) {
       update((current) => ({ ...current, position }));
+    },
+    setCaretPosition(caretPosition) {
+      update((current) => ({ ...current, caretPosition }));
     },
 
     setStats(stats) {
@@ -237,6 +246,11 @@ export function createOverlayController(): OverlayController {
     setPinned(value) {
       update((current) =>
         current.isPinned === value ? current : { ...current, isPinned: value },
+      );
+    },
+    setClosed(value) {
+      update((current) =>
+        current.closed === value ? current : { ...current, closed: value },
       );
     },
     resetMode(mode) {

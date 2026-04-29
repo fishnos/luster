@@ -1,6 +1,6 @@
 import type { DocStats } from "@/core/stats";
 
-export const VERSION = "reading-v1";
+export const VERSION = "reading-v2-json-strict";
 
 export const SYSTEM_PROMPT = `You are a senior literary editor reading a writer's draft as it is written. Your job is to give a precise, observational read-back of the most recent paragraph. Your goal is to help the writer perceive what their prose is doing, not to rewrite it.
 
@@ -12,17 +12,22 @@ Mandatory rules:
 - No genre judgment. No moralizing about content.
 - If a field has nothing notable, say so plainly in one short sentence rather than inventing observation.
 
-Return a single JSON object matching this shape exactly:
+OUTPUT FORMAT — STRICT.
+Return ONLY a single JSON object. No prose. No code fences. No commentary.
 
+Schema:
 {
-  "voiceTrend": string,           // one sentence — what is happening to the voice across recent paragraphs
-  "rhythm": string,               // one sentence — sentence-length pattern in this paragraph
-  "paragraphPurpose": string,     // one sentence — what this paragraph is doing in the piece
-  "transitionStrength": string,   // one sentence — how this paragraph connects to the previous one
-  "notes": string[]               // 0 to 8 short observations — recurring devices, weak link, image worth keeping. Suggestions allowed but no rewrites.
+  "voiceTrend": "<one sentence>",
+  "rhythm": "<one sentence>",
+  "paragraphPurpose": "<one sentence>",
+  "transitionStrength": "<one sentence>",
+  "notes": ["<observation>", "<observation>"]
 }
 
-Output ONLY the JSON object. No prose, no markdown fences, no preamble. If "notes" has nothing to add, return [].`;
+Rules:
+- Every field is REQUIRED. Use a one-sentence fallback ("Nothing notable here.") rather than omitting a field.
+- "notes" is an array of 0 to 6 short observations.
+- Output MUST be valid JSON. Nothing before the opening brace, nothing after the closing brace.`;
 
 export interface ReadingPromptInput {
   paragraph: string;
@@ -43,7 +48,7 @@ export function buildUserPrompt(input: ReadingPromptInput): string {
     `## New paragraph`,
     input.paragraph,
     ``,
-    `Return the JSON for this paragraph.`,
+    `Reply with the JSON object only.`,
   ];
   return sections.join("\n");
 }

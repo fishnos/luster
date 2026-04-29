@@ -26,7 +26,10 @@ export function extractJson(text: string): string {
 
   const jsonCandidate = content.slice(firstBrace);
 
-  const lastBrace = Math.max(jsonCandidate.lastIndexOf("}"), jsonCandidate.lastIndexOf("]"));
+  const lastBrace = Math.max(
+    jsonCandidate.lastIndexOf("}"),
+    jsonCandidate.lastIndexOf("]"),
+  );
 
   if (lastBrace !== -1) {
     return jsonCandidate.slice(0, lastBrace + 1);
@@ -35,35 +38,131 @@ export function extractJson(text: string): string {
   return jsonCandidate;
 }
 
+function repairTruncatedArrayObject(raw: string): string | null {
+  const trimmed = raw.trim();
+  if (!trimmed.startsWith("{")) return null;
+  const arrayMatch = trimmed.match(/"([A-Za-z_][\w]*)"\s*:\s*\[/);
+  if (!arrayMatch) return null;
+  const arrayKey = arrayMatch[1];
+  const arrayStart = arrayMatch.index! + arrayMatch[0].length;
+  const completed: string[] = [];
+  let cursor = arrayStart;
+  while (cursor < trimmed.length) {
+    while (cursor < trimmed.length && /[\s,]/.test(trimmed[cursor]!)) cursor++;
+    if (cursor >= trimmed.length) break;
+    if (trimmed[cursor] === "]") break;
+    if (trimmed[cursor] !== "{") break;
+    let depth = 0;
+    let insideString = false;
+    let escaped = false;
+    const objectStart = cursor;
+    let closed = false;
+    while (cursor < trimmed.length) {
+      const character = trimmed[cursor]!;
+      if (escaped) {
+        escaped = false;
+        cursor++;
+        continue;
+      }
+      if (character === "\\") {
+        escaped = true;
+        cursor++;
+        continue;
+      }
+      if (character === '"') {
+        insideString = !insideString;
+        cursor++;
+        continue;
+      }
+      if (insideString) {
+        cursor++;
+        continue;
+      }
+      if (character === "{") depth++;
+      else if (character === "}") {
+        depth--;
+        if (depth === 0) {
+          cursor++;
+          completed.push(trimmed.slice(objectStart, cursor));
+          closed = true;
+          break;
+        }
+      }
+      cursor++;
+    }
+    if (!closed) break;
+  }
+  return `{"${arrayKey}":[${completed.join(",")}]}`;
+}
+
 function repairJson(json: string): string {
   let repaired = json.trim();
 
-  repaired = repaired
-    .replace(/}(\s*){/g, "},$1{")
-    .replace(/](\s*)\[/g, "],$1[")
-    .replace(/}(\s*)\[/g, "},$1[")
-    .replace(/](\s*){/g, "],$1{");
+  repaired = repaired.replace(
+    /: \s*"([\s\S]*?)"\s*([,}\]])/g,
+    (match, content, suffix) => {
+      const fixedContent = content.replace(/(?<!\\)"/g, '\\"');
+      return `: "${fixedContent}"${suffix}`;
+    },
+  );
 
-  repaired = repaired.replace(/[,\s:]+$/, "");
+  repaired = repaired.replace(/: \s*"([^"]*)"/g, (match, p1) => {
+    return `: "${p1.replace(/\n/g, "\\n")}"`;
+  });
+
+  repaired = repaired.replace(/("?\s*[:=]\s*[^,\]\}\s]+)\s*\n\s*"/g, '$1,\n"');
+  repaired = repaired.replace(/\}\s*\{/g, "}, {");
 
   const stack: ("{" | "[")[] = [];
   let inString = false;
   let escaped = false;
+  let clean = "";
 
   for (let i = 0; i < repaired.length; i++) {
     const char = repaired[i];
-    if (escaped) { escaped = false; continue; }
-    if (char === "\\") { escaped = true; continue; }
-    if (char === '"') { inString = !inString; continue; }
-    if (inString) continue;
+    if (escaped) {
+      clean += char;
+      escaped = false;
+      continue;
+    }
+    if (char === "\\") {
+      clean += char;
+      escaped = true;
+      continue;
+    }
+    if (char === '"') {
+      inString = !inString;
+      clean += char;
+      continue;
+    }
+    if (inString) {
+      if (char === "\n") clean += "\\n";
+      else if (char === "\r") clean += "\\r";
+      else if (char === "\t") clean += "\\t";
+      else clean += char;
+      continue;
+    }
 
     if (char === "{") stack.push("{");
     else if (char === "[") stack.push("[");
-    else if (char === "}") stack.pop();
-    else if (char === "]") stack.pop();
+    else if (char === "}") {
+      if (stack[stack.length - 1] === "{") stack.pop();
+      else continue;
+    } else if (char === "]") {
+      if (stack[stack.length - 1] === "[") stack.pop();
+      else continue; // drop stray ]
+    }
+    clean += char;
   }
 
-  if (inString) repaired += '"';
+  repaired = clean;
+
+  if (inString) {
+    // Try to close the string. If it ends with a stray backslash, drop it.
+    if (repaired.endsWith("\\")) repaired = repaired.slice(0, -1);
+    repaired += '"';
+  }
+
   while (stack.length > 0) {
     const last = stack.pop();
     if (last === "{") repaired += "}";
@@ -77,20 +176,27 @@ export function safeParse<TSchema extends ZodTypeAny>(
   schema: TSchema,
   text: string,
 ): ParseResult<ZodInfer<TSchema>> {
+  const trimmed = text.trim();
+  if (!trimmed) return { ok: false, error: "empty AI response" };
+
+  let candidate: any = null;
+
   const extracted = extractJson(text);
-
-  let candidate: unknown;
-  let parseError: any = null;
-
   if (extracted) {
     try {
       candidate = JSON.parse(extracted);
     } catch (e) {
-      parseError = e;
       try {
         candidate = JSON.parse(repairJson(extracted));
       } catch (e2) {
-        // repair failed
+        const truncated = repairTruncatedArrayObject(extracted);
+        if (truncated) {
+          try {
+            candidate = JSON.parse(truncated);
+          } catch (e3) {
+            // truncation repair failed
+          }
+        }
       }
     }
   }
@@ -100,27 +206,137 @@ export function safeParse<TSchema extends ZodTypeAny>(
     if (result.success) return { ok: true, data: result.data };
   }
 
-    const regexCandidate = attemptRegexExtraction(text, schema);
+  if (!candidate) {
+    candidate = parseFuzzyTags(text);
+  }
+  if (candidate) {
+    const result = schema.safeParse(candidate);
+    if (result.success) return { ok: true, data: result.data };
+  }
+
+  const regexCandidate = attemptRegexExtraction(text, schema);
   if (regexCandidate) {
     const result = schema.safeParse(regexCandidate);
     if (result.success) return { ok: true, data: result.data };
-
-    const issueSummary = result.error.issues
-      .map((issue) => `${issue.path.join(".") || "(root)"}: ${issue.message}`)
-      .join("; ");
-    return { ok: false, error: `schema validation failed — ${issueSummary}` };
-  }
-
-  if (!text.trim()) {
-    return { ok: false, error: "empty AI response" };
   }
 
   return {
     ok: false,
-    error: parseError
-      ? `invalid JSON: ${parseError.message} (Raw: ${text.trim().slice(-40)})`
-      : `no valid JSON or fields found (Raw: ${text.trim().slice(-40)})`,
+    error: `could not parse response (Raw: ${trimmed.slice(-60)})`,
   };
+}
+
+function parseFuzzyTags(text: string): any {
+  const lines = text
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
+  const result: any = {};
+
+  const arrays: Record<string, any[]> = {
+    issues: [],
+    questions: [],
+    notes: [],
+  };
+
+  let currentBlock: any = null;
+  let currentArrayName: string | null = null;
+
+  for (const line of lines) {
+    const lower = line.toLowerCase();
+
+    // Detect array/block starts
+    if (
+      lower.includes("issue") &&
+      !lower.includes(":") &&
+      !lower.includes("/")
+    ) {
+      currentBlock = {};
+      currentArrayName = "issues";
+      continue;
+    }
+    if (
+      lower.includes("question") &&
+      !lower.includes(":") &&
+      !lower.includes("/")
+    ) {
+      currentBlock = {};
+      currentArrayName = "questions";
+      continue;
+    }
+
+    // Detect field values
+    const colonIndex = line.indexOf(":");
+    if (colonIndex !== -1) {
+      let key = line
+        .slice(0, colonIndex)
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z]/g, "");
+      let value = line
+        .slice(colonIndex + 1)
+        .trim()
+        .replace(/^["']|["']$/g, "");
+
+      if (currentBlock) {
+        // Special case: spans (e.g., "Span: 10, 20" or "Start: 10")
+        if (key === "span") {
+          const nums = value.match(/\d+/g);
+          if (nums) {
+            currentBlock.span = {
+              start: Number(nums[0]),
+              end: Number(nums[1] || nums[0] + 1),
+            };
+          }
+        } else if (key === "start") {
+          currentBlock.span = currentBlock.span || { start: 0, end: 1 };
+          currentBlock.span.start = Number(value);
+        } else if (key === "end") {
+          currentBlock.span = currentBlock.span || { start: 0, end: 1 };
+          currentBlock.span.end = Number(value);
+        } else {
+          currentBlock[key] = value;
+        }
+      } else {
+        // Root fields
+        if (key === "voicetrend") result.voiceTrend = value;
+        else if (key === "paragraphpurpose") result.paragraphPurpose = value;
+        else if (key === "transitionstrength")
+          result.transitionStrength = value;
+        else result[key] = value;
+      }
+      continue;
+    }
+
+    // Handle end of blocks
+    if (
+      lower.includes("/issue") ||
+      lower.includes("end_issue") ||
+      (currentBlock && lower.includes("issue"))
+    ) {
+      if (currentBlock && currentArrayName) {
+        arrays[currentArrayName].push(currentBlock);
+        currentBlock = null;
+      }
+    }
+
+    // Handle notes (simple list items)
+    if (line.startsWith("- ") || line.startsWith("* ")) {
+      arrays.notes.push(line.slice(2).trim());
+    }
+  }
+
+  // If a block was left open, close it
+  if (currentBlock && currentArrayName) {
+    arrays[currentArrayName].push(currentBlock);
+  }
+
+  // Merge arrays into result
+  if (arrays.issues.length > 0) result.issues = arrays.issues;
+  if (arrays.questions.length > 0) result.questions = arrays.questions;
+  if (arrays.notes.length > 0) result.notes = arrays.notes;
+
+  return Object.keys(result).length > 0 ? result : null;
 }
 
 function attemptRegexExtraction(text: string, schema: ZodTypeAny): any {
@@ -144,25 +360,15 @@ function attemptRegexExtraction(text: string, schema: ZodTypeAny): any {
       continue;
     }
 
-    const numberRegex = new RegExp(`"${key}"\\s*[:=]\\s*(\\d+(?:\\.\\d+)?)`, "i");
+    const numberRegex = new RegExp(
+      `"${key}"\\s*[:=]\\s*(\\d+(?:\\.\\d+)?)`,
+      "i",
+    );
     const numberMatch = text.match(numberRegex);
     if (numberMatch) {
       result[key] = Number(numberMatch[1]);
       foundAny = true;
       continue;
-    }
-
-    const arrayRegex = new RegExp(`"${key}"\\s*[:=]\\s*\\[([^\\]]*)\\]`, "i");
-    const arrayMatch = text.match(arrayRegex);
-    if (arrayMatch) {
-      try {
-        const items = arrayMatch[1]
-          .split(",")
-          .map((s) => s.trim().replace(/^["']|["']$/g, ""))
-          .filter((s) => s.length > 0);
-        result[key] = items;
-        foundAny = true;
-      } catch { /* skip */ }
     }
   }
 
