@@ -15,6 +15,19 @@ import {
 const bridgeStateListeners = new Set<(state: BridgeState) => void>();
 let lastBridgeState: BridgeState = "searching";
 
+interface BufferedTextMessage {
+  fullText: string;
+  paragraphs: string[];
+  glyphCount: number;
+  generation: number;
+}
+
+let bufferedText: BufferedTextMessage | null = null;
+let bufferedCaret: {
+  rect: { x: number; y: number; width: number; height: number } | null;
+  docIndex: number | null;
+} | null = null;
+
 if (typeof window !== "undefined") {
   window.addEventListener("message", (event: MessageEvent) => {
     if (!isBridgeMessage(event.data)) return;
@@ -22,6 +35,18 @@ if (typeof window !== "undefined") {
     if (event.data.type === "state") {
       lastBridgeState = event.data.state;
       for (const listener of bridgeStateListeners) listener(event.data.state);
+    } else if (event.data.type === "text") {
+      bufferedText = {
+        fullText: event.data.fullText,
+        paragraphs: event.data.paragraphs,
+        glyphCount: event.data.glyphCount,
+        generation: event.data.generation,
+      };
+    } else if (event.data.type === "caret") {
+      bufferedCaret = {
+        rect: event.data.rect,
+        docIndex: event.data.docIndex,
+      };
     }
   });
 }
@@ -179,6 +204,38 @@ export const googleDocsAdapter: Adapter = {
     }
 
     window.addEventListener("message", onWindowMessage);
+
+    if (bufferedText) {
+      handleBridgeMessage({
+        channel: BRIDGE_NAMESPACE,
+        type: "text",
+        fullText: bufferedText.fullText,
+        paragraphs: bufferedText.paragraphs,
+        glyphCount: bufferedText.glyphCount,
+        generation: bufferedText.generation,
+      });
+    }
+    if (bufferedCaret) {
+      handleBridgeMessage({
+        channel: BRIDGE_NAMESPACE,
+        type: "caret",
+        rect: bufferedCaret.rect,
+        docIndex: bufferedCaret.docIndex,
+      });
+    }
+
+    try {
+      window.postMessage(
+        {
+          channel: BRIDGE_NAMESPACE,
+          type: "probe-request",
+          requestId: `attach-${Date.now()}`,
+        },
+        "*",
+      );
+    } catch {
+      // ignore
+    }
 
     return {
       readText: () => lastFullText,

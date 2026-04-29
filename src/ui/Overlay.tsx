@@ -2,7 +2,6 @@ import { useCallback, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import type { ModeName } from "@/core/types";
 import { Button } from "@/ui/components/ui/button";
-import { ScrollArea } from "@/ui/components/ui/scroll-area";
 import { Badge } from "@/ui/components/ui/badge";
 import { Icon } from "@/ui/components/Icon";
 import { Mark } from "@/ui/components/Mark";
@@ -66,7 +65,10 @@ function FullPanel({
       className="luster-root luster-card text-luster-ink overflow-hidden flex flex-col"
     >
       <Header controller={controller} state={state} />
-      <ScrollArea className="flex-1 px-3 py-3">
+      <div
+        className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-3"
+        style={{ overscrollBehavior: "contain" }}
+      >
         <AnimatePresence mode="wait" initial={false}>
           {state.view === "main" ? (
             <motion.div
@@ -98,7 +100,7 @@ function FullPanel({
             </motion.div>
           )}
         </AnimatePresence>
-      </ScrollArea>
+      </div>
     </motion.div>
   );
 }
