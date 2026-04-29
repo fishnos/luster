@@ -1,6 +1,4 @@
 import { useState } from "react";
-import { Button } from "@/ui/components/ui/button";
-import { Icon } from "@/ui/components/Icon";
 import { cn } from "@/ui/cn";
 import type { ProviderId } from "@/core/types";
 import { sendValidateKey } from "@/core/sendRequest";
@@ -25,12 +23,6 @@ const PROVIDER_KEY_URL: Record<ProviderId, string> = {
   gemini: "https://aistudio.google.com/apikey",
   anthropic: "https://console.anthropic.com/settings/keys",
   openai: "https://platform.openai.com/api-keys",
-};
-
-const PROVIDER_BLURB: Record<ProviderId, string> = {
-  gemini: "Free tier — 15 req/min on Gemini Flash.",
-  anthropic: "Strongest for the editorial Reading mode.",
-  openai: "Solid all-rounder. Pay-per-token.",
 };
 
 const keyVault = createKeyVault(createBrowserLocalStorage());
@@ -72,85 +64,77 @@ export function ConnectBanner({ onConnected }: ConnectBannerProps) {
   }
 
   return (
-    <div className="rounded-md border border-luster-border bg-luster-card overflow-hidden">
-      <div className="bg-luster-accent-soft px-3 py-2.5 border-b border-luster-border">
-        <div className="flex items-center gap-2 text-luster-accent">
-          <Icon name="sparkle" size={14} />
-          <span className="text-[12px] font-medium">
-            Connect to AI to start
-          </span>
-        </div>
-        <p className="text-[12px] text-luster-muted mt-1">
-          Your key stays on this device. Pick a provider and paste a key to
-          begin.
+    <div className="space-y-4 pb-2">
+      <div className="space-y-1">
+        <div className="luster-eyebrow">Connect to start</div>
+        <p className="text-[12px] leading-snug text-luster-muted">
+          Your key stays on this device.
         </p>
       </div>
 
-      <div className="px-3 py-3 space-y-3">
-        <div className="grid grid-cols-3 gap-1 rounded-md bg-luster-surface p-1 border border-luster-border">
-          {PROVIDERS.map((entry) => {
-            const isActive = entry === provider;
-            return (
-              <button
-                key={entry}
-                type="button"
-                onClick={() => {
-                  setProvider(entry);
-                  setStatus({ tone: "idle" });
-                }}
-                className={cn(
-                  "luster-press h-7 rounded text-[12px] font-medium transition-colors",
-                  isActive
-                    ? "bg-luster-card text-luster-ink shadow-[0_1px_0_rgba(26,24,22,0.05),0_0_0_1px_rgba(26,24,22,0.06)]"
-                    : "text-luster-muted hover:text-luster-ink",
-                )}
-              >
-                {PROVIDER_LABEL[entry]}
-              </button>
-            );
-          })}
-        </div>
-
-        <p className="text-[11px] text-luster-muted">
-          {PROVIDER_BLURB[provider]}
-        </p>
-
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between text-[11px]">
-            <label className="text-luster-faint uppercase tracking-[0.14em]">
-              API key
-            </label>
-            <a
-              href={PROVIDER_KEY_URL[provider]}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-0.5 text-luster-accent hover:underline"
+      <div className="flex items-center gap-3 text-[13px]">
+        {PROVIDERS.map((entry) => {
+          const isActive = entry === provider;
+          return (
+            <button
+              key={entry}
+              type="button"
+              onClick={() => {
+                setProvider(entry);
+                setStatus({ tone: "idle" });
+              }}
+              className={cn(
+                "luster-press relative pb-1 font-medium transition-colors",
+                isActive
+                  ? "text-luster-ink"
+                  : "text-luster-faint hover:text-luster-muted",
+              )}
             >
-              Get a key <Icon name="arrow-right" size={12} />
-            </a>
-          </div>
-          <input
-            type="password"
-            value={apiKey}
-            onChange={(event) => setApiKey(event.target.value)}
-            placeholder={PROVIDER_HINT[provider]}
-            className="luster-mono w-full rounded-md border border-luster-border bg-luster-card px-2.5 py-1.5 text-[12px] text-luster-ink placeholder:text-luster-faint focus:border-luster-accent focus:outline-none"
-          />
-        </div>
+              {PROVIDER_LABEL[entry]}
+              {isActive && (
+                <span className="absolute inset-x-0 bottom-0 h-px bg-luster-ink" />
+              )}
+            </button>
+          );
+        })}
+      </div>
 
-        {status.tone === "error" && (
-          <div className="text-[12px] text-luster-err">{status.message}</div>
-        )}
-
-        <Button
-          variant="default"
-          size="sm"
+      <div className="flex items-center gap-2">
+        <input
+          type="password"
+          value={apiKey}
+          onChange={(event) => setApiKey(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              void connect();
+            }
+          }}
+          placeholder={PROVIDER_HINT[provider]}
+          className="luster-mono luster-glass-input flex-1 px-3 py-2 text-[12.5px]"
+        />
+        <button
+          type="button"
           onClick={connect}
           disabled={status.tone === "pending"}
-          className="w-full"
+          className="luster-press h-9 rounded-md bg-luster-ink px-4 text-[12px] font-semibold text-luster-ink0 hover:bg-white disabled:opacity-60"
         >
-          {status.tone === "pending" ? "Validating…" : "Connect"}
-        </Button>
+          {status.tone === "pending" ? "…" : "Connect"}
+        </button>
+      </div>
+
+      <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.16em]">
+        <a
+          href={PROVIDER_KEY_URL[provider]}
+          target="_blank"
+          rel="noreferrer"
+          className="text-luster-faint hover:text-luster-ink"
+        >
+          Get a key →
+        </a>
+        {status.tone === "error" && (
+          <span className="text-luster-err">{status.message}</span>
+        )}
       </div>
     </div>
   );

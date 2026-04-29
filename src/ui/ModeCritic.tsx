@@ -1,7 +1,7 @@
 import type { CriticIssue } from "@/core/types";
-import { Badge } from "@/ui/components/ui/badge";
 import { ModeStatusBanner } from "@/ui/ModeStatusBanner";
 import type { ModeOverlayInfo, OverlayController } from "@/ui/state";
+import { cn } from "@/ui/cn";
 
 const SEVERITY_ORDER: CriticIssue["severity"][] = [
   "structural",
@@ -10,14 +10,18 @@ const SEVERITY_ORDER: CriticIssue["severity"][] = [
   "nit",
 ];
 
-const SEVERITY_TONE: Record<
-  string,
-  "default" | "secondary" | "destructive" | "outline"
-> = {
-  structural: "destructive",
-  clarity: "default",
-  rhythm: "secondary",
-  nit: "outline",
+const SEVERITY_LABEL: Record<CriticIssue["severity"], string> = {
+  structural: "Structural",
+  clarity: "Clarity",
+  rhythm: "Rhythm",
+  nit: "Nit",
+};
+
+const SEVERITY_TONE: Record<CriticIssue["severity"], string> = {
+  structural: "text-luster-err",
+  clarity: "text-luster-ink",
+  rhythm: "text-luster-warn",
+  nit: "text-luster-faint",
 };
 
 export interface ModeCriticProps {
@@ -28,12 +32,16 @@ export interface ModeCriticProps {
 
 export function ModeCritic({ controller, info, sentence }: ModeCriticProps) {
   return (
-    <div className="rounded-md border border-luster-border bg-luster-card">
-      <div className="flex items-center justify-between border-b border-luster-border px-3 py-2 text-[10px] uppercase tracking-[0.14em] text-luster-faint">
-        <span>Critic · structure &amp; connection</span>
-        {info.provider && <span>{info.provider}</span>}
-      </div>
-      <div className="px-3 py-3 text-[13px]">
+    <section className="space-y-3">
+      <header className="flex items-baseline justify-between">
+        <span className="luster-eyebrow">Structure & connection</span>
+        {info.provider && (
+          <span className="text-[10px] tracking-[0.04em] text-luster-faint">
+            {info.provider}
+          </span>
+        )}
+      </header>
+      <div className="text-[13px]">
         <ModeStatusBanner
           info={info}
           idleText="Finish a sentence to be critiqued."
@@ -43,7 +51,7 @@ export function ModeCritic({ controller, info, sentence }: ModeCriticProps) {
           <CriticBody issues={info.output.result.issues} sentence={sentence} />
         )}
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -57,7 +65,7 @@ function CriticBody({
   if (issues.length === 0) {
     return (
       <div className="luster-cross flex items-center gap-2 text-[13px] text-luster-ok">
-        <span className="inline-block h-1.5 w-1.5 rounded-full bg-luster-ok" />
+        <span className="inline-block h-1 w-1 rounded-full bg-luster-ok" />
         No issues spotted in the latest sentence.
       </div>
     );
@@ -68,23 +76,22 @@ function CriticBody({
       SEVERITY_ORDER.indexOf(right.severity),
   );
   return (
-    <ul className="luster-cross space-y-3">
+    <ul className="luster-cross space-y-4">
       {sortedIssues.map((issue, index) => (
         <li key={index} className="space-y-1.5">
-          <div className="flex items-center gap-2">
-            <Badge
-              variant={SEVERITY_TONE[issue.severity] ?? "secondary"}
-              className="h-4 px-1 text-[9px] uppercase"
+          <div className="flex items-baseline gap-2">
+            <span
+              className={cn("luster-eyebrow", SEVERITY_TONE[issue.severity])}
             >
-              {issue.severity}
-            </Badge>
-            <span className="text-[13px] text-luster-ink font-medium">
+              {SEVERITY_LABEL[issue.severity]}
+            </span>
+            <span className="text-[13px] font-medium text-luster-ink">
               {issue.label}
             </span>
           </div>
           {sentence && <SpanQuote sentence={sentence} issue={issue} />}
           {issue.suggestion && (
-            <div className="luster-serif text-[13px] text-luster-muted leading-snug">
+            <div className="luster-serif text-[13px] leading-snug text-luster-muted">
               → {issue.suggestion}
             </div>
           )}
@@ -105,12 +112,12 @@ function SpanQuote({
   const inside = sentence.slice(issue.span.start, issue.span.end);
   const after = sentence.slice(issue.span.end);
   return (
-    <div className="luster-serif rounded-md border border-luster-border bg-white/[0.02] px-2.5 py-2 text-[13px] leading-snug">
-      <span className="text-luster-muted">{before}</span>
-      <span className="bg-white/[0.08] text-luster-ink underline decoration-luster-warn decoration-wavy decoration-2 underline-offset-2">
+    <div className="luster-serif py-1 text-[13px] leading-snug">
+      <span className="text-luster-faint">{before}</span>
+      <span className="text-luster-ink underline decoration-luster-warn decoration-wavy decoration-2 underline-offset-2">
         {inside}
       </span>
-      <span className="text-luster-muted">{after}</span>
+      <span className="text-luster-faint">{after}</span>
     </div>
   );
 }

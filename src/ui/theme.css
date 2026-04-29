@@ -10,31 +10,29 @@
   :root {
     color-scheme: dark;
     --background: 0 0% 4%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 7%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 7%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 96%;
-    --primary-foreground: 0 0% 7%;
-    --secondary: 0 0% 11%;
-    --secondary-foreground: 0 0% 96%;
-    --muted: 0 0% 11%;
-    --muted-foreground: 0 0% 60%;
-    --accent: 0 0% 96%;
-    --accent-foreground: 0 0% 7%;
+    --foreground: 0 0% 100%;
+    --card: 0 0% 9%;
+    --card-foreground: 0 0% 100%;
+    --popover: 0 0% 9%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 0 0% 100%;
+    --primary-foreground: 0 0% 5%;
+    --secondary: 0 0% 14%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 0 0% 14%;
+    --muted-foreground: 0 0% 78%;
+    --accent: 0 0% 100%;
+    --accent-foreground: 0 0% 5%;
     --destructive: 0 30% 60%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 18%;
-    --input: 0 0% 18%;
-    --ring: 0 0% 70%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 24%;
+    --input: 0 0% 24%;
+    --ring: 0 0% 90%;
     --radius: 0.625rem;
 
-    --glass-bg: rgba(20, 20, 20, 0.55);
-    --glass-bg-strong: rgba(15, 15, 15, 0.7);
-    --glass-border: rgba(255, 255, 255, 0.07);
-    --glass-blur: 28px;
-    --glass-saturate: 140%;
+    --glass-bg: rgba(24, 24, 24, 0.92);
+    --glass-bg-strong: rgba(18, 18, 18, 0.96);
+    --glass-border: rgba(255, 255, 255, 0.16);
 
     --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
     --ease-out-strong: cubic-bezier(0.16, 1, 0.3, 1);
@@ -68,28 +66,26 @@
 
 .luster-display {
   font-family: "Geist Variable", "Geist", system-ui, sans-serif;
-  font-weight: 500;
-  letter-spacing: -0.02em;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  color: #ffffff;
 }
 
 .luster-eyebrow {
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.16em;
-  color: #6b6b6b;
-  font-weight: 500;
+  color: #909090;
+  font-weight: 600;
 }
 
 .luster-card {
   background: var(--glass-bg);
-  -webkit-backdrop-filter: saturate(var(--glass-saturate))
-    blur(var(--glass-blur));
-  backdrop-filter: saturate(var(--glass-saturate)) blur(var(--glass-blur));
   border: 1px solid var(--glass-border);
   border-radius: 14px;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.06),
-    0 1px 0 rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 1px 0 rgba(0, 0, 0, 0.5),
     0 12px 32px -10px rgba(0, 0, 0, 0.55),
     0 28px 64px -20px rgba(0, 0, 0, 0.45);
 }
@@ -99,7 +95,7 @@
 }
 
 .luster-hairline {
-  border-color: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
 }
 
 .luster-serif {
@@ -124,34 +120,30 @@
 }
 
 .luster-mount {
-  animation: luster-mount 360ms var(--ease-out-soft);
+  animation: luster-mount 220ms var(--ease-out-soft);
 }
 
 @keyframes luster-mount {
   from {
     opacity: 0;
-    filter: blur(8px);
-    transform: translateY(6px);
+    transform: translateY(4px);
   }
   to {
     opacity: 1;
-    filter: blur(0);
     transform: translateY(0);
   }
 }
 
 .luster-cross {
-  animation: luster-cross 220ms var(--ease-out-soft);
+  animation: luster-cross 180ms var(--ease-out-soft);
 }
 
 @keyframes luster-cross {
   from {
     opacity: 0;
-    filter: blur(6px);
   }
   to {
     opacity: 1;
-    filter: blur(0);
   }
 }
 
@@ -162,7 +154,7 @@
 @keyframes luster-pulse {
   0%,
   100% {
-    opacity: 0.4;
+    opacity: 0.5;
   }
   50% {
     opacity: 1;
@@ -172,9 +164,9 @@
 .luster-thinking-bar {
   background-image: linear-gradient(
     90deg,
-    rgba(212, 212, 212, 0) 0%,
-    rgba(212, 212, 212, 0.7) 50%,
-    rgba(212, 212, 212, 0) 100%
+    rgba(220, 220, 220, 0) 0%,
+    rgba(240, 240, 240, 0.85) 50%,
+    rgba(220, 220, 220, 0) 100%
   );
   background-size: 200% 100%;
   animation: luster-shimmer 1.4s linear infinite;
@@ -194,105 +186,99 @@
   inset: 0;
   overflow: hidden;
   pointer-events: none;
-  background: #0a0a0a;
-}
-
-.luster-backdrop::before,
-.luster-backdrop::after {
-  content: "";
-  position: absolute;
-  width: 320px;
-  height: 320px;
-  border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.55;
-  will-change: transform;
-}
-
-.luster-backdrop::before {
-  background: radial-gradient(
-    circle at center,
-    rgba(212, 212, 212, 0.18),
-    rgba(212, 212, 212, 0) 70%
-  );
-  top: -80px;
-  left: -80px;
-  animation: luster-drift-a 22s ease-in-out infinite;
-}
-
-.luster-backdrop::after {
-  background: radial-gradient(
-    circle at center,
-    rgba(255, 255, 255, 0.12),
-    rgba(255, 255, 255, 0) 70%
-  );
-  bottom: -100px;
-  right: -90px;
-  animation: luster-drift-b 28s ease-in-out infinite;
-}
-
-@keyframes luster-drift-a {
-  0%,
-  100% {
-    transform: translate3d(-6%, -4%, 0) scale(1);
-  }
-  50% {
-    transform: translate3d(8%, 6%, 0) scale(1.15);
-  }
-}
-
-@keyframes luster-drift-b {
-  0%,
-  100% {
-    transform: translate3d(8%, 6%, 0) scale(1.1);
-  }
-  50% {
-    transform: translate3d(-6%, -10%, 0) scale(0.95);
-  }
+  background:
+    radial-gradient(
+      circle at 20% 20%,
+      rgba(255, 255, 255, 0.06),
+      transparent 55%
+    ),
+    radial-gradient(
+      circle at 80% 80%,
+      rgba(255, 255, 255, 0.04),
+      transparent 50%
+    ),
+    #0a0a0a;
 }
 
 .luster-glass-input {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: #fafafa;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #ffffff;
   border-radius: 10px;
   transition:
-    border-color 180ms var(--ease-out-soft),
-    background 180ms var(--ease-out-soft);
+    border-color 160ms var(--ease-out-soft),
+    background 160ms var(--ease-out-soft);
 }
 
 .luster-glass-input::placeholder {
-  color: #6b6b6b;
+  color: #8a8a8a;
 }
 
 .luster-glass-input:focus {
   outline: none;
-  border-color: rgba(255, 255, 255, 0.28);
-  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .luster-divider {
   height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.08),
-    transparent
-  );
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.luster-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #e6e6e6;
+  line-height: 1;
+}
+
+.luster-status-pill[data-tone="ok"] {
+  background: rgba(180, 220, 180, 0.12);
+  border-color: rgba(180, 220, 180, 0.32);
+  color: #d6ead6;
+}
+
+.luster-status-pill[data-tone="pending"] {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+.luster-status-pill[data-tone="error"] {
+  background: rgba(220, 170, 170, 0.14);
+  border-color: rgba(220, 170, 170, 0.36);
+  color: #ecc8c8;
+}
+
+.luster-status-pill[data-tone="warn"] {
+  background: rgba(220, 200, 160, 0.12);
+  border-color: rgba(220, 200, 160, 0.32);
+  color: #ead9b8;
+}
+
+.luster-status-pill > .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentColor;
+  flex-shrink: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .luster-mount,
   .luster-cross,
   .luster-pulse,
-  .luster-thinking-bar,
-  .luster-backdrop::before,
-  .luster-backdrop::after {
+  .luster-thinking-bar {
     animation: none !important;
-  }
-  .luster-mount,
-  .luster-cross {
-    filter: none !important;
-    transform: none !important;
   }
 }

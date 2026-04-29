@@ -7,9 +7,9 @@ export interface StatsPanelProps {
 export function StatsPanel({ stats }: StatsPanelProps) {
   if (stats === null || stats.words === 0) {
     return (
-      <div className="rounded-md border border-luster-border bg-luster-surface/70 px-3 py-2.5 text-[12px] text-luster-muted">
+      <p className="text-[12px] text-luster-faint">
         Start writing in your document.
-      </div>
+      </p>
     );
   }
 
@@ -19,22 +19,15 @@ export function StatsPanel({ stats }: StatsPanelProps) {
   ];
 
   return (
-    <div className="rounded-md border border-luster-border bg-luster-surface/70">
-      <div className="grid grid-cols-2 divide-x divide-luster-border">
-        {cells.map((cell) => (
-          <div
-            key={cell.label}
-            className="flex flex-col items-center px-2 py-2.5"
-          >
-            <span className="luster-num text-[15px] font-semibold text-luster-ink leading-none">
-              {cell.value}
-            </span>
-            <span className="text-[9px] uppercase tracking-[0.18em] text-luster-faint mt-1">
-              {cell.label}
-            </span>
-          </div>
-        ))}
-      </div>
+    <div className="flex items-baseline gap-6">
+      {cells.map((cell) => (
+        <div key={cell.label} className="flex items-baseline gap-1.5">
+          <span className="luster-num text-[18px] font-semibold leading-none text-luster-ink">
+            {cell.value}
+          </span>
+          <span className="luster-eyebrow">{cell.label}</span>
+        </div>
+      ))}
     </div>
   );
 }

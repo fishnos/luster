@@ -64,30 +64,32 @@ function FullPanel({
       }}
       className="luster-root luster-card text-luster-ink overflow-hidden flex flex-col"
     >
-      <Header controller={controller} state={state} />
+      <div className="shrink-0">
+        <Header controller={controller} state={state} />
+      </div>
       <div
-        className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-3"
+        className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-3 py-3"
         style={{ overscrollBehavior: "contain" }}
       >
         <AnimatePresence mode="wait" initial={false}>
           {state.view === "main" ? (
             <motion.div
               key="main"
-              initial={{ opacity: 0, filter: "blur(8px)", y: 4 }}
-              animate={{ opacity: 1, filter: "blur(0px)", y: 0 }}
-              exit={{ opacity: 0, filter: "blur(6px)", y: -4 }}
-              transition={{ duration: 0.28, ease: EASE_OUT }}
-              className="space-y-3"
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.2, ease: EASE_OUT }}
+              className="space-y-4"
             >
               <MainView controller={controller} state={state} />
             </motion.div>
           ) : (
             <motion.div
               key="settings"
-              initial={{ opacity: 0, filter: "blur(8px)", y: 4 }}
-              animate={{ opacity: 1, filter: "blur(0px)", y: 0 }}
-              exit={{ opacity: 0, filter: "blur(6px)", y: -4 }}
-              transition={{ duration: 0.28, ease: EASE_OUT }}
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.2, ease: EASE_OUT }}
             >
               <InlineSettings
                 onBack={() => controller.setView("main")}
@@ -171,8 +173,6 @@ function Header({
     [],
   );
 
-  const wordCount = state.stats?.words ?? 0;
-
   return (
     <div
       data-testid="luster-drag-handle"
@@ -180,26 +180,15 @@ function Header({
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
-      className="flex h-11 cursor-grab items-center gap-2 border-b border-luster-border px-3 active:cursor-grabbing"
+      className="flex h-12 cursor-grab items-center gap-2.5 px-4 active:cursor-grabbing"
     >
-      <Mark size={20} />
-      <div className="flex items-baseline gap-2">
-        <span className="luster-display text-[15px] text-luster-ink">
-          Luster
-        </span>
+      <Mark size={18} rounded={false} />
+      <div className="flex items-center gap-2">
+        <span className="luster-display text-[14px] leading-none">Luster</span>
         <StatusDot status={state.modes[state.activeMode].status} />
       </div>
 
       <div className="ml-auto flex items-center gap-1">
-        <span
-          className="luster-num text-[11.5px] text-luster-muted mr-1.5 leading-none"
-          aria-label={`${wordCount} words in document`}
-        >
-          <span className="text-luster-ink">
-            {wordCount.toLocaleString("en-US")}
-          </span>{" "}
-          <span className="text-luster-faint">words</span>
-        </span>
         <Button
           variant="ghost"
           size="icon"

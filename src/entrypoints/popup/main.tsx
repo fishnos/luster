@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { motion } from "framer-motion";
+import { ArrowRight } from "lucide-react";
 import "@/ui/theme.css";
 import { Mark } from "@/ui/components/Mark";
-import { GlassCard } from "@/ui/components/GlassCard";
 import { AmbientBackdrop } from "@/ui/components/AmbientBackdrop";
 import { WelcomeFlow } from "@/ui/welcome/WelcomeFlow";
 import { createKeyVault } from "@/core/keyVault";
@@ -49,13 +49,9 @@ function Popup() {
     setWelcomeSeen(true);
   }
 
-  if (welcomeSeen === null) {
-    return <Shell />;
-  }
-
   return (
     <Shell>
-      {welcomeSeen ? (
+      {welcomeSeen === null ? null : welcomeSeen ? (
         <MainView />
       ) : (
         <WelcomeFlow onComplete={() => void completeWelcome()} />
@@ -66,11 +62,9 @@ function Popup() {
 
 function Shell({ children }: { children?: React.ReactNode }) {
   return (
-    <div className="luster-root relative w-[340px] min-h-[360px] overflow-hidden bg-luster-ink0">
+    <div className="luster-root relative w-[340px] min-h-[320px] overflow-hidden bg-luster-ink0">
       <AmbientBackdrop />
-      <div className="relative z-10 p-4">
-        <GlassCard className="overflow-hidden">{children}</GlassCard>
-      </div>
+      <div className="relative z-10">{children}</div>
     </div>
   );
 }
@@ -112,47 +106,30 @@ function MainView() {
       variants={staggerContainer}
       initial="hidden"
       animate="visible"
-      className="flex flex-col gap-4 p-5"
+      className="flex flex-col gap-7 px-6 py-7"
     >
       <motion.div variants={blurFadeIn} className="flex items-center gap-3">
-        <Mark size={28} />
-        <div className="flex flex-col">
-          <div className="luster-display text-[16px] leading-none text-luster-ink">
-            Luster
-          </div>
-          <div className="text-[11px] mt-1 text-luster-muted">
-            Editor for your prose, in your editor.
-          </div>
-        </div>
+        <Mark size={26} rounded={false} />
+        <span className="luster-display text-[18px] leading-none">Luster</span>
       </motion.div>
 
-      <motion.div
-        variants={blurFadeIn}
-        className="flex flex-col gap-2.5 rounded-lg border border-luster-border bg-white/[0.02] px-3.5 py-3"
-      >
-        {!loaded ? (
-          <span className="text-[12px] text-luster-muted">Loading…</span>
-        ) : (
-          <>
-            <Row
-              label="AI"
-              tone={hasKey ? "ok" : "muted"}
-              value={
-                hasKey
-                  ? `Connected · ${PROVIDER_LABEL[activeProvider]}`
-                  : "Not connected"
-              }
-            />
-            <div className="luster-divider" />
-            <Row
-              label="This page"
-              tone={tabSupported ? "ok" : "muted"}
-              value={
-                tabSupported ? "Supported editor" : "Open a supported editor"
-              }
-            />
-          </>
-        )}
+      <motion.div variants={blurFadeIn} className="flex flex-col gap-4">
+        <Field
+          label="Provider"
+          value={loaded ? (hasKey ? PROVIDER_LABEL[activeProvider] : "—") : "…"}
+          dim={!hasKey}
+        />
+        <Field
+          label="Page"
+          value={
+            loaded
+              ? tabSupported
+                ? "Supported editor"
+                : "No editor here"
+              : "…"
+          }
+          dim={!tabSupported}
+        />
       </motion.div>
 
       <motion.button
@@ -160,47 +137,43 @@ function MainView() {
         type="button"
         onClick={openOptions}
         className={cn(
-          "luster-press group flex h-10 w-full items-center justify-center gap-2 rounded-lg",
-          "border border-luster-border bg-white/[0.04] text-[13px] font-medium text-luster-ink",
-          "transition-colors hover:bg-white/[0.08]",
+          "luster-press group inline-flex items-center gap-1.5 self-start text-[13px] font-medium text-luster-ink",
+          "border-b border-transparent hover:border-luster-ink transition-colors pb-0.5",
         )}
       >
         {hasKey ? "Open settings" : "Connect to AI"}
-        <span
-          aria-hidden
-          className="text-luster-muted transition-transform duration-200 group-hover:translate-x-0.5"
-        >
-          →
-        </span>
+        <ArrowRight
+          size={13}
+          className="transition-transform duration-200 group-hover:translate-x-0.5"
+        />
       </motion.button>
 
       <motion.p
         variants={blurFadeIn}
-        className="text-[10px] leading-snug text-luster-faint"
+        className="text-[11px] leading-relaxed text-luster-faint"
       >
-        Once connected, the panel auto-launches inside Google Docs, Notion,
-        Substack, Medium, and Ghost editors.
+        Auto-launches inside Google Docs, Notion, Substack, Medium, Ghost.
       </motion.p>
     </motion.div>
   );
 }
 
-function Row({
+function Field({
   label,
   value,
-  tone,
+  dim,
 }: {
   label: string;
   value: string;
-  tone: "ok" | "muted";
+  dim: boolean;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3">
+    <div className="flex flex-col gap-1">
       <span className="luster-eyebrow">{label}</span>
       <span
         className={cn(
-          "text-[12px] tracking-[-0.005em]",
-          tone === "ok" ? "text-luster-ink-soft" : "text-luster-muted",
+          "text-[14px] leading-none tracking-[-0.005em]",
+          dim ? "text-luster-faint" : "text-luster-ink",
         )}
       >
         {value}

@@ -14,7 +14,8 @@ const SUPPORT_PROBE_MS = 2500;
 const MAX_GLYPHS_PER_CANVAS = 12000;
 const CLEAR_RECT_COOLDOWN_MS = 60;
 const STABLE_CANDIDATE_THRESHOLD = 3;
-const DOM_FALLBACK_DEBOUNCE_MS = 1500;
+const DOM_FALLBACK_DEBOUNCE_MS = 350;
+const DOM_FALLBACK_PERIODIC_MS = 2500;
 const DOM_FALLBACK_OBSERVE_TARGETS = [
   ".kix-rotatingtilemanager-content",
   ".kix-canvas-tile-selection",
@@ -67,6 +68,9 @@ function installCanvasBridge(): void {
   let lastReconstructedParagraphCount = 0;
   let lastReconstructedSample = "";
   let lastEmittedText = "";
+  let lastCanvasText = "";
+  let lastDomText = "";
+  let lastDomParagraphs: string[] = [];
   let pendingCandidateText = "";
   let lastClearRectTime = 0;
   let pendingCandidateCount = 0;
@@ -335,7 +339,7 @@ function installCanvasBridge(): void {
       lastReconstructedSample = reconstruction.fullText.slice(0, 160);
 
       const candidate = reconstruction.fullText;
-      if (candidate === lastEmittedText) {
+      if (candidate === lastCanvasText) {
         pendingCandidateText = "";
         pendingCandidateCount = 0;
         return;
@@ -354,8 +358,8 @@ function installCanvasBridge(): void {
         pendingCandidateCount = 1;
       }
       const isMonotonicGrowth =
-        candidate.length > lastEmittedText.length &&
-        candidate.startsWith(lastEmittedText);
+        candidate.length > lastCanvasText.length &&
+        candidate.startsWith(lastCanvasText);
       const stableLongEnough =
         pendingCandidateCount >= STABLE_CANDIDATE_THRESHOLD;
       if (!isMonotonicGrowth && !stableLongEnough) {
@@ -363,18 +367,10 @@ function installCanvasBridge(): void {
         return;
       }
 
-      lastEmittedText = candidate;
+      lastCanvasText = candidate;
       pendingCandidateText = "";
       pendingCandidateCount = 0;
-      teardownDomObserver();
-      postBridgeMessage({
-        channel: BRIDGE_NAMESPACE,
-        type: "text",
-        fullText: candidate,
-        paragraphs: reconstruction.paragraphs,
-        glyphCount: merged.length,
-        generation: ++generation,
-      });
+      emitBest(reconstruction.paragraphs, merged.length);
     } catch (error) {
       logOnce("reconstruct", error);
     }
@@ -441,11 +437,15 @@ function installCanvasBridge(): void {
 
   function readSvgAriaText(): string[] {
     const ariaSelectors = [
-      "svg rect[aria-label]",
-      "svg text[aria-label]",
-      "svg g[aria-label]",
-      ".kix-appview-editor [aria-label]",
+      ".kix-page-content-wrapper [aria-label]",
       ".kix-page [aria-label]",
+      ".kix-appview-editor [aria-label]",
+      ".kix-rotatingtilemanager-content [aria-label]",
+      "svg g[aria-label]",
+      "svg text[aria-label]",
+      "svg rect[aria-label]",
+      "[role='paragraph'][aria-label]",
+      "[role='textbox'][aria-label]",
     ];
     for (const selector of ariaSelectors) {
       let nodes: NodeListOf<Element>;
@@ -496,47 +496,38 @@ function installCanvasBridge(): void {
 
   function runDomFallback(): void {
     try {
-      if (lastEmittedText.length > 0) {
-        teardownDomObserver();
-        return;
-      }
       const paragraphs = readDomParagraphs();
       if (paragraphs.length === 0) return;
       const fullText = paragraphs.join("\n\n");
       if (fullText === lastDomEmittedText) return;
-      if (fullText === lastEmittedText) return;
       lastDomEmittedText = fullText;
-      lastEmittedText = fullText;
-      lastReconstructedTextLength = fullText.length;
-      lastReconstructedParagraphCount = paragraphs.length;
-      lastReconstructedSample = fullText.slice(0, 160);
+      lastDomText = fullText;
+      lastDomParagraphs = paragraphs;
       if (currentBridgeState !== "attached") setState("attached");
-      postBridgeMessage({
-        channel: BRIDGE_NAMESPACE,
-        type: "text",
-        fullText,
-        paragraphs,
-        glyphCount: 0,
-        generation: ++generation,
-      });
+      emitBest(paragraphs, 0);
     } catch (error) {
       logOnce("dom-fallback", error);
     }
   }
 
-  function teardownDomObserver(): void {
-    if (domObserver) {
-      try {
-        domObserver.disconnect();
-      } catch {
-        // ignore
-      }
-      domObserver = null;
-    }
-    if (domFallbackTimer !== null) {
-      window.clearTimeout(domFallbackTimer);
-      domFallbackTimer = null;
-    }
+  function emitBest(canvasParagraphs: string[], glyphCount: number): void {
+    const useDom = lastDomText.length > lastCanvasText.length;
+    const fullText = useDom ? lastDomText : lastCanvasText;
+    const paragraphs = useDom ? lastDomParagraphs : canvasParagraphs;
+    if (fullText.length === 0) return;
+    if (fullText === lastEmittedText) return;
+    lastEmittedText = fullText;
+    lastReconstructedTextLength = fullText.length;
+    lastReconstructedParagraphCount = paragraphs.length;
+    lastReconstructedSample = fullText.slice(0, 160);
+    postBridgeMessage({
+      channel: BRIDGE_NAMESPACE,
+      type: "text",
+      fullText,
+      paragraphs,
+      glyphCount,
+      generation: ++generation,
+    });
   }
 
   function installDomObserver(): void {
@@ -628,6 +619,8 @@ function installCanvasBridge(): void {
   } else {
     tryInstallDomObserverWithRetry();
   }
+
+  window.setInterval(runDomFallback, DOM_FALLBACK_PERIODIC_MS);
 
   window.setTimeout(() => {
     const hasGlyphs = totalGlyphCount() > 0;

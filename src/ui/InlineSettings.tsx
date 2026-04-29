@@ -197,18 +197,22 @@ export function InlineSettings({
   }
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-1 text-[12px] text-luster-muted">
-        <Button variant="ghost" size="icon" aria-label="Back" onClick={onBack}>
+    <div className="space-y-7">
+      <div className="flex items-center gap-1.5">
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Back"
+          onClick={onBack}
+          className="h-6 w-6"
+        >
           <Icon name="back" size={14} />
         </Button>
-        <span className="font-medium uppercase tracking-[0.14em] text-[10px] text-luster-faint">
-          Settings
-        </span>
+        <span className="luster-eyebrow">Settings</span>
       </div>
 
       <Section label="Connect">
-        <div className="grid grid-cols-3 gap-1 rounded-md bg-luster-surface p-1 border border-luster-border">
+        <div className="flex items-center gap-3 text-[12px]">
           {PROVIDERS.map((entry) => {
             const isActive = entry === provider;
             return (
@@ -217,100 +221,113 @@ export function InlineSettings({
                 type="button"
                 onClick={() => chooseProvider(entry)}
                 className={cn(
-                  "luster-press relative h-7 rounded text-[12px] font-medium transition-colors",
+                  "luster-press relative pb-1 text-[13px] font-medium transition-colors",
                   isActive
-                    ? "bg-luster-card text-luster-ink shadow-[0_1px_0_rgba(26,24,22,0.05),0_0_0_1px_rgba(26,24,22,0.06)]"
-                    : "text-luster-muted hover:text-luster-ink",
+                    ? "text-luster-ink"
+                    : "text-luster-faint hover:text-luster-muted",
                 )}
               >
                 {PROVIDER_LABEL[entry]}
                 {keyPresent[entry] && (
-                  <span className="absolute right-1 top-1 inline-block h-1 w-1 rounded-full bg-luster-ok" />
+                  <span className="ml-1 inline-block h-1 w-1 rounded-full bg-luster-ok align-middle" />
+                )}
+                {isActive && (
+                  <span className="absolute inset-x-0 bottom-0 h-px bg-luster-ink" />
                 )}
               </button>
             );
           })}
         </div>
 
-        <div className="flex items-center justify-between text-[11px]">
-          <span className="text-luster-faint uppercase tracking-[0.14em]">
-            API key
-          </span>
-          <a
-            href={PROVIDER_KEY_URL[provider]}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-0.5 text-luster-accent hover:underline"
-          >
-            Get a key <Icon name="arrow-right" size={12} />
-          </a>
-        </div>
-
-        <div className="flex gap-1.5">
-          <input
-            type="password"
-            value={apiKey}
-            onChange={(event) => setApiKey(event.target.value)}
-            placeholder={
-              keyPresent[provider]
-                ? "•••••• (saved — paste new to replace)"
-                : PROVIDER_KEY_HINT[provider]
-            }
-            className="luster-mono flex-1 rounded-md border border-luster-border bg-luster-card px-2.5 py-1.5 text-[12px] text-luster-ink placeholder:text-luster-faint focus:border-luster-accent focus:outline-none"
-          />
-          <Button variant="default" size="sm" onClick={saveKey}>
-            Save
-          </Button>
-          {keyPresent[provider] && (
-            <Button variant="ghost" size="sm" onClick={clearKey}>
-              Clear
-            </Button>
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <span className="luster-eyebrow">API key</span>
+            <a
+              href={PROVIDER_KEY_URL[provider]}
+              target="_blank"
+              rel="noreferrer"
+              className="text-[10px] uppercase tracking-[0.16em] text-luster-faint hover:text-luster-ink"
+            >
+              Get a key →
+            </a>
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="password"
+              value={apiKey}
+              onChange={(event) => setApiKey(event.target.value)}
+              placeholder={
+                keyPresent[provider]
+                  ? "•••••• (paste new to replace)"
+                  : PROVIDER_KEY_HINT[provider]
+              }
+              className="luster-mono luster-glass-input flex-1 px-3 py-2 text-[12.5px]"
+            />
+            <button
+              type="button"
+              onClick={saveKey}
+              className="luster-press h-9 rounded-md bg-luster-ink px-4 text-[12px] font-semibold text-luster-ink0 hover:bg-white"
+            >
+              Save
+            </button>
+            {keyPresent[provider] && (
+              <button
+                type="button"
+                onClick={clearKey}
+                className="luster-press text-[11px] uppercase tracking-[0.14em] text-luster-faint hover:text-luster-ink"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+          {status.tone !== "idle" && (
+            <div
+              className={cn(
+                "text-[11.5px]",
+                status.tone === "pending" && "text-luster-muted",
+                status.tone === "saved" && "text-luster-ok",
+                status.tone === "error" && "text-luster-err",
+              )}
+            >
+              {status.tone === "pending" ? "Validating…" : status.message}
+            </div>
           )}
         </div>
-
-        {status.tone !== "idle" && (
-          <div
-            className={cn(
-              "text-[12px]",
-              status.tone === "pending" && "text-luster-muted",
-              status.tone === "saved" && "text-luster-ok",
-              status.tone === "error" && "text-luster-err",
-            )}
-          >
-            {status.tone === "pending" ? "Validating…" : status.message}
-          </div>
-        )}
       </Section>
 
       <Section label="Default mode">
-        <div className="space-y-1">
-          {MODES.map((mode) => (
-            <label
-              key={mode}
-              className={cn(
-                "flex cursor-pointer items-start gap-2.5 rounded-md border px-2.5 py-2 transition-colors",
-                defaultMode === mode
-                  ? "border-luster-accent bg-luster-accent-soft"
-                  : "border-luster-border bg-luster-card hover:bg-luster-surface",
-              )}
-            >
-              <input
-                type="radio"
-                name="default-mode"
-                className="mt-0.5 accent-luster-accent"
-                checked={defaultMode === mode}
-                onChange={() => chooseDefaultMode(mode)}
-              />
-              <div>
-                <div className="text-[13px] text-luster-ink">
-                  {MODE_LABEL[mode]}
+        <div className="space-y-2">
+          {MODES.map((mode) => {
+            const isActive = defaultMode === mode;
+            return (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => chooseDefaultMode(mode)}
+                className="luster-press group flex w-full items-start gap-3 text-left"
+              >
+                <span
+                  className={cn(
+                    "mt-1.5 h-1.5 w-1.5 rounded-full transition-colors",
+                    isActive ? "bg-luster-ink" : "bg-luster-ink4",
+                  )}
+                />
+                <div>
+                  <div
+                    className={cn(
+                      "text-[13px] transition-colors",
+                      isActive ? "text-luster-ink" : "text-luster-muted",
+                    )}
+                  >
+                    {MODE_LABEL[mode]}
+                  </div>
+                  <div className="text-[11.5px] leading-snug text-luster-faint">
+                    {MODE_DESCRIPTION[mode]}
+                  </div>
                 </div>
-                <div className="text-[11px] text-luster-muted">
-                  {MODE_DESCRIPTION[mode]}
-                </div>
-              </div>
-            </label>
-          ))}
+              </button>
+            );
+          })}
         </div>
       </Section>
 
@@ -319,7 +336,7 @@ export function InlineSettings({
           checked={autoLaunch}
           onChange={changeAutoLaunch}
           label="Open Luster automatically"
-          description="Show the panel when you visit Google Docs, Notion, Substack, Medium, or Ghost."
+          description="Google Docs, Notion, Substack, Medium, Ghost."
         />
       </Section>
 
@@ -328,14 +345,17 @@ export function InlineSettings({
         onToggle={(event) =>
           setAdvancedOpen((event.target as HTMLDetailsElement).open)
         }
-        className="rounded-md border border-luster-border bg-luster-card overflow-hidden"
+        className="group"
       >
-        <summary className="cursor-pointer select-none px-3 py-2 text-[10px] uppercase tracking-[0.14em] text-luster-faint">
-          Advanced
+        <summary className="luster-press flex cursor-pointer list-none items-center gap-1.5 select-none">
+          <span className="luster-eyebrow">Advanced</span>
+          <span className="text-luster-faint transition-transform group-open:rotate-90">
+            ›
+          </span>
         </summary>
-        <div className="space-y-3 border-t border-luster-border px-3 py-3 text-[12px]">
+        <div className="mt-4 space-y-5">
           <div className="space-y-1.5">
-            <div className="text-[10px] uppercase tracking-[0.14em] text-luster-faint">
+            <div className="luster-eyebrow">
               Model · {PROVIDER_LABEL[provider]}
             </div>
             <input
@@ -348,27 +368,35 @@ export function InlineSettings({
                 }))
               }
               onBlur={commitModel}
-              className="luster-mono w-full rounded-md border border-luster-border bg-luster-card px-2.5 py-1.5 text-[12px] text-luster-ink"
+              className="luster-mono luster-glass-input w-full px-3 py-2 text-[12.5px]"
             />
-            <div className="text-[10px] text-luster-faint">
-              default: {DEFAULT_MODELS[provider]}
+            <div className="text-[10px] uppercase tracking-[0.14em] text-luster-faint">
+              default {DEFAULT_MODELS[provider]}
             </div>
           </div>
 
-          <div className="space-y-2 border-t border-luster-border pt-3">
+          <div className="space-y-3">
             <Toggle
               checked={historyEnabled}
               onChange={toggleHistory}
               label="Keep per-document history"
-              description="Local-only stats and AI outputs. Never includes your raw text."
+              description="Local-only. Never includes your raw text."
             />
-            <div className="flex gap-1.5">
-              <Button variant="outline" size="sm" onClick={exportHistory}>
+            <div className="flex gap-3 text-[11px] uppercase tracking-[0.14em]">
+              <button
+                type="button"
+                onClick={exportHistory}
+                className="luster-press text-luster-muted hover:text-luster-ink"
+              >
                 Export JSON
-              </Button>
-              <Button variant="ghost" size="sm" onClick={clearHistory}>
+              </button>
+              <button
+                type="button"
+                onClick={clearHistory}
+                className="luster-press text-luster-faint hover:text-luster-err"
+              >
                 Clear all
-              </Button>
+              </button>
             </div>
           </div>
         </div>
@@ -385,12 +413,10 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-md border border-luster-border bg-luster-card">
-      <div className="border-b border-luster-border px-3 py-2 text-[10px] uppercase tracking-[0.14em] text-luster-faint">
-        {label}
-      </div>
-      <div className="px-3 py-3 space-y-3 text-[12px]">{children}</div>
-    </div>
+    <section className="space-y-3">
+      <div className="luster-eyebrow">{label}</div>
+      <div className="space-y-3">{children}</div>
+    </section>
   );
 }
 

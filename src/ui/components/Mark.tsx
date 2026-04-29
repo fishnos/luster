@@ -4,9 +4,10 @@ import { cn } from "@/ui/cn";
 export interface MarkProps {
   size?: number;
   className?: string;
+  rounded?: boolean;
 }
 
-export function Mark({ size = 22, className }: MarkProps) {
+export function Mark({ size = 22, className, rounded = true }: MarkProps) {
   return (
     <img
       src={browser.runtime.getURL("/icon/128.png" as never)}
@@ -14,7 +15,7 @@ export function Mark({ size = 22, className }: MarkProps) {
       height={size}
       alt="Luster"
       className={cn("shrink-0", className)}
-      style={{ borderRadius: size * 0.2 }}
+      style={{ borderRadius: rounded ? size * 0.2 : 0 }}
     />
   );
 }

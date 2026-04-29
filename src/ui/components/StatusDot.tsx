@@ -1,36 +1,37 @@
 import { cn } from "@/ui/cn";
 import type { ModeStatus } from "@/ui/state";
 
-const STATUS_STYLES: Record<ModeStatus, string> = {
-  idle: "bg-luster-faint",
-  pending: "bg-luster-accent luster-pulse",
-  ok: "bg-luster-ok",
-  error: "bg-luster-err",
-  "rate-limited": "bg-luster-warn",
+const STATUS_LABEL: Record<ModeStatus, string> = {
+  idle: "Idle",
+  pending: "Thinking",
+  ok: "Ready",
+  error: "Error",
+  "rate-limited": "Paused",
 };
 
-const STATUS_LABEL: Record<ModeStatus, string> = {
-  idle: "idle",
-  pending: "thinking",
-  ok: "ready",
+const STATUS_TONE: Record<ModeStatus, string> = {
+  idle: "neutral",
+  pending: "pending",
+  ok: "ok",
   error: "error",
-  "rate-limited": "paused",
+  "rate-limited": "warn",
 };
 
 export interface StatusDotProps {
   status: ModeStatus;
+  className?: string;
 }
 
-export function StatusDot({ status }: StatusDotProps) {
+export function StatusDot({ status, className }: StatusDotProps) {
   return (
     <span
       role="status"
       aria-label={STATUS_LABEL[status]}
-      data-status={status}
-      className={cn(
-        "inline-block h-1.5 w-1.5 rounded-full",
-        STATUS_STYLES[status],
-      )}
-    />
+      data-tone={STATUS_TONE[status]}
+      className={cn("luster-status-pill", className)}
+    >
+      <span className={cn("dot", status === "pending" && "luster-pulse")} />
+      {STATUS_LABEL[status]}
+    </span>
   );
 }

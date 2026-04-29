@@ -1,5 +1,4 @@
 import type { HostKind } from "@/ui/state";
-import { Button } from "@/ui/components/ui/button";
 import { Icon } from "@/ui/components/Icon";
 import { diagnoseGoogleDocs, probeBridge } from "@/adapters/google-docs";
 
@@ -15,41 +14,45 @@ export function EditorHint({ hostKind }: EditorHintProps) {
   }
 
   return (
-    <div className="rounded-md border border-luster-border bg-luster-accent-soft px-3 py-2.5 space-y-2">
-      <div className="flex items-center gap-2 text-luster-accent">
-        <Icon name="sparkle" size={13} />
-        <span className="text-[12px] font-medium">{hint.title}</span>
+    <div className="space-y-2 border-l-2 border-luster-border-strong pl-3">
+      <div className="flex items-center gap-2">
+        <Icon name="sparkle" size={12} className="text-luster-ink-soft" />
+        <span className="text-[12px] font-medium text-luster-ink">
+          {hint.title}
+        </span>
       </div>
-      <p className="text-[12px] text-luster-ink-soft leading-snug">
-        {hint.body}
-      </p>
+      <p className="text-[12px] leading-snug text-luster-muted">{hint.body}</p>
       {hint.steps && (
-        <ol className="text-[12px] text-luster-ink-soft list-decimal pl-4 space-y-0.5">
+        <ol className="list-decimal space-y-0.5 pl-4 text-[12px] text-luster-muted">
           {hint.steps.map((step, index) => (
             <li key={index}>{step}</li>
           ))}
         </ol>
       )}
       {hint.fallback && (
-        <p className="text-[11px] text-luster-muted leading-snug pt-1 border-t border-luster-border">
+        <p className="pt-1 text-[11px] leading-snug text-luster-faint">
           {hint.fallback}
         </p>
       )}
-      <div className="flex flex-wrap items-center gap-2 pt-1">
+      <div className="flex flex-wrap items-center gap-3 pt-1 text-[11px] uppercase tracking-[0.14em]">
         {hostKind === "google-docs" && (
           <>
-            <Button variant="default" size="sm" onClick={reload}>
-              Reload tab
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
+            <button
+              type="button"
+              onClick={reload}
+              className="luster-press text-luster-ink hover:text-white"
+            >
+              Reload tab →
+            </button>
+            <button
+              type="button"
               onClick={() => {
                 void runDocsDiagnostic();
               }}
+              className="luster-press text-luster-faint hover:text-luster-ink"
             >
               Diagnose
-            </Button>
+            </button>
           </>
         )}
         {hint.link && (
@@ -57,9 +60,9 @@ export function EditorHint({ hostKind }: EditorHintProps) {
             href={hint.link.href}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-0.5 text-[12px] text-luster-accent hover:underline"
+            className="luster-press text-luster-faint hover:text-luster-ink"
           >
-            {hint.link.label} <Icon name="arrow-right" size={12} />
+            {hint.link.label} →
           </a>
         )}
       </div>
