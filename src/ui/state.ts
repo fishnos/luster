@@ -44,7 +44,7 @@ export function createInitialOverlayState(): OverlayState {
     activeMode: "reading",
     view: "main",
     minimized: false,
-    position: { x: window.innerWidth - 400, y: 96 },
+    position: { x: Math.max(24, window.innerWidth - 420), y: 96 },
     caretPosition: null,
     stats: null,
     modes: {

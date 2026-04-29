@@ -11,11 +11,7 @@ import { createKeyVault } from "@/core/keyVault";
 import { createBrowserLocalStorage } from "@/core/storageBackend";
 
 const CONTEXT_PARAGRAPH_WINDOW = 3;
-const COMMIT_QUIET_MS_BY_MODE: Record<ModeName, number> = {
-  critic: 1200,
-  interrogation: 700,
-  reading: 700,
-};
+const COMMIT_QUIET_MS = 1200;
 
 export interface BootstrapAdapterDeps {
   adapter: Adapter;
@@ -53,6 +49,16 @@ export function bootstrapAdapter(
   });
 
   let lastCaretPopupData: import("@/core/types").CaretPopupData | null = null;
+  let lastActiveMode = deps.controller.getState().activeMode;
+  const unsubscribeMode = deps.controller.subscribe(() => {
+    const next = deps.controller.getState().activeMode;
+    if (next === lastActiveMode) return;
+    lastActiveMode = next;
+    if (next === "reading") {
+      lastCaretPopupData = null;
+      deps.setCaretPopup(null, null);
+    }
+  });
   const handleCaretChange = (rect: DOMRect | null) => {
     if (!rect) {
       if (lastCaretPopupData) {
@@ -118,10 +124,7 @@ export function bootstrapAdapter(
     const activeMode = state.activeMode;
     pendingCommit = { mode: activeMode, delta };
     if (commitTimer) clearTimeout(commitTimer);
-    commitTimer = setTimeout(
-      flushPendingCommit,
-      COMMIT_QUIET_MS_BY_MODE[activeMode] ?? 1200,
-    );
+    commitTimer = setTimeout(flushPendingCommit, COMMIT_QUIET_MS);
   });
 
   async function runForMode(mode: ModeName, delta: CommitDelta): Promise<void> {
@@ -169,6 +172,11 @@ export function bootstrapAdapter(
     }
 
     deps.controller.setModeOutput(mode, result.output, result.provider);
+
+    if (mode === "reading") {
+      lastCaretPopupData = null;
+      deps.setCaretPopup(null, null);
+    }
 
     if (mode === "interrogation" && result.output.mode === "interrogation") {
       const lastQuestion = result.output.result.questions.at(-1);
@@ -218,6 +226,7 @@ export function bootstrapAdapter(
       unsubscribeText();
       unsubscribeCaret();
       unsubscribeCommit();
+      unsubscribeMode();
       handle.detach();
     },
   };
