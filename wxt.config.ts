@@ -8,7 +8,7 @@ export default defineConfig({
     name: "Luster",
     description:
       "Interrogates your prose as you write — reading, interrogation, and critic modes.",
-    version: "0.1.0",
+    version: "1.0.0",
     permissions: ["storage", "activeTab"],
     host_permissions: [
       "https://docs.google.com/*",
