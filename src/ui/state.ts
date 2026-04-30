@@ -1,5 +1,7 @@
 import type { ModeName, ModeOutput, ProviderId } from "@/core/types";
 import type { DocStats } from "@/core/stats";
+import type { DocContext } from "@/core/docContext";
+import { EMPTY_DOC_CONTEXT } from "@/core/docContext";
 
 export type ModeStatus = "idle" | "pending" | "ok" | "error" | "rate-limited";
 
@@ -14,6 +16,19 @@ export interface ModeOverlayInfo {
   retryAfterMs?: number;
   provider?: ProviderId;
   lastUpdatedAt?: number;
+}
+
+export type AutoModeReason =
+  | "drafting-paragraph-commit"
+  | "thinking-pause"
+  | "revising-edits"
+  | "polishing-touchups"
+  | "flow-suppress";
+
+export interface AutoModeStatus {
+  active: boolean;
+  lastSwitchReason: AutoModeReason | null;
+  lastSwitchAt: number | null;
 }
 
 export interface OverlayState {
@@ -33,6 +48,10 @@ export interface OverlayState {
   hostKind: HostKind;
   isPinned: boolean;
   closed: boolean;
+  docId: string | null;
+  docContext: DocContext;
+  autoModeStatus: AutoModeStatus;
+  fullText: string;
 }
 
 export type HostKind = "unknown" | "google-docs" | "notion" | "prosemirror";
@@ -51,6 +70,7 @@ export function createInitialOverlayState(): OverlayState {
       reading: { ...INITIAL_MODE_INFO },
       interrogation: { ...INITIAL_MODE_INFO },
       critic: { ...INITIAL_MODE_INFO },
+      echo: { ...INITIAL_MODE_INFO },
     },
     criticSentence: null,
     connectState: "unknown",
@@ -61,6 +81,14 @@ export function createInitialOverlayState(): OverlayState {
     hostKind: "unknown",
     isPinned: false,
     closed: false,
+    docId: null,
+    docContext: { ...EMPTY_DOC_CONTEXT },
+    autoModeStatus: {
+      active: false,
+      lastSwitchReason: null,
+      lastSwitchAt: null,
+    },
+    fullText: "",
   };
 }
 
@@ -73,6 +101,7 @@ export interface OverlayController {
   setPosition: (position: { x: number; y: number }) => void;
   setCaretPosition: (position: { x: number; y: number } | null) => void;
   setStats: (stats: DocStats) => void;
+  setFullText: (text: string) => void;
   markModePending: (mode: ModeName) => void;
   setModeOutput: (
     mode: ModeName,
@@ -89,6 +118,13 @@ export interface OverlayController {
   setHostKind: (value: HostKind) => void;
   setPinned: (value: boolean) => void;
   setClosed: (value: boolean) => void;
+  setDocId: (docId: string | null) => void;
+  setDocContext: (context: DocContext) => void;
+  setBrief: (brief: string) => void;
+  setPact: (pact: string) => void;
+  setAutoMode: (autoMode: boolean) => void;
+  setAutoModeStatus: (status: AutoModeStatus) => void;
+  setActiveModeFromAuto: (mode: ModeName, reason: AutoModeReason) => void;
   resetMode: (mode: ModeName) => void;
   reset: () => void;
 }
@@ -162,6 +198,12 @@ export function createOverlayController(): OverlayController {
 
     setStats(stats) {
       update((current) => ({ ...current, stats }));
+    },
+
+    setFullText(text) {
+      update((current) =>
+        current.fullText === text ? current : { ...current, fullText: text },
+      );
     },
 
     markModePending(mode) {
@@ -252,6 +294,58 @@ export function createOverlayController(): OverlayController {
       update((current) =>
         current.closed === value ? current : { ...current, closed: value },
       );
+    },
+    setDocId(docId) {
+      update((current) =>
+        current.docId === docId ? current : { ...current, docId },
+      );
+    },
+    setDocContext(context) {
+      update((current) => ({ ...current, docContext: context }));
+    },
+    setBrief(brief) {
+      update((current) => ({
+        ...current,
+        docContext: { ...current.docContext, brief },
+      }));
+    },
+    setPact(pact) {
+      update((current) => ({
+        ...current,
+        docContext: { ...current.docContext, pact },
+      }));
+    },
+    setAutoMode(autoMode) {
+      update((current) => ({
+        ...current,
+        docContext: { ...current.docContext, autoMode },
+      }));
+    },
+    setAutoModeStatus(status) {
+      update((current) => ({ ...current, autoModeStatus: status }));
+    },
+    setActiveModeFromAuto(mode, reason) {
+      update((current) => {
+        if (current.activeMode === mode) {
+          return {
+            ...current,
+            autoModeStatus: {
+              active: true,
+              lastSwitchReason: reason,
+              lastSwitchAt: Date.now(),
+            },
+          };
+        }
+        return {
+          ...current,
+          activeMode: mode,
+          autoModeStatus: {
+            active: true,
+            lastSwitchReason: reason,
+            lastSwitchAt: Date.now(),
+          },
+        };
+      });
     },
     resetMode(mode) {
       withMode(mode, () => ({ ...INITIAL_MODE_INFO }));

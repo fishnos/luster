@@ -31,6 +31,8 @@ const CriticOutputSchema = z.object({
 export interface CriticEngineInput {
   delta: CommitDelta;
   contextBefore: string;
+  brief?: string;
+  pact?: string;
 }
 
 export type CriticEngineFailureReason =
@@ -76,6 +78,8 @@ export function createCriticEngine(deps: CriticEngineDeps): CriticEngine {
           sentence: input.delta.sentence,
           paragraph: input.delta.paragraph,
           contextBefore: input.contextBefore,
+          brief: input.brief,
+          pact: input.pact,
         }),
         expectJson: true,
         maxTokens: 4096,

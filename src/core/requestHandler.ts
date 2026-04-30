@@ -11,6 +11,8 @@ import {
 import type {
   CriticEngineInput,
   CriticEngineResult,
+  EchoEngineInput,
+  EchoEngineResult,
   InterrogationEngineInput,
   InterrogationEngineResult,
   ReadingEngineInput,
@@ -18,6 +20,7 @@ import type {
 } from "@/core/modes";
 import type {
   CriticOutput,
+  EchoOutput,
   InterrogationOutput,
   ModeName,
   ModeOutput,
@@ -27,7 +30,8 @@ import type {
 export type EngineRunResult =
   | ReadingEngineResult
   | InterrogationEngineResult
-  | CriticEngineResult;
+  | CriticEngineResult
+  | EchoEngineResult;
 
 export type RequestHandler = (
   request: LusterRequest,
@@ -107,6 +111,37 @@ export function createRequestHandler(
           await services.historyStore.clear(request.payload.docId);
           return ok();
 
+        case "doc-context/get":
+          return ok(await services.docContextStore.get(request.payload.docId));
+
+        case "doc-context/set-brief":
+          await services.docContextStore.setBrief(
+            request.payload.docId,
+            request.payload.brief,
+          );
+          return ok();
+
+        case "doc-context/set-pact":
+          await services.docContextStore.setPact(
+            request.payload.docId,
+            request.payload.pact,
+          );
+          return ok();
+
+        case "doc-context/set-auto-mode":
+          await services.docContextStore.setAutoMode(
+            request.payload.docId,
+            request.payload.autoMode,
+          );
+          return ok();
+
+        case "doc-context/get-default-brief":
+          return ok(await services.docContextStore.getDefaultBrief());
+
+        case "doc-context/set-default-brief":
+          await services.docContextStore.setDefaultBrief(request.payload.brief);
+          return ok();
+
         default:
           return fail(
             `unknown request type: ${(request as { type: string }).type}`,
@@ -123,11 +158,13 @@ async function runMode(
   request: RunModeRequest,
 ): Promise<EngineRunResult> {
   const { payload } = request;
+  const docContext = await services.docContextStore.get(payload.docId);
   if (payload.mode === "reading") {
     const input: ReadingEngineInput = {
       delta: payload.delta,
       stats: payload.stats,
       contextBefore: payload.contextBefore,
+      brief: docContext.brief,
     };
     return services.modeEngines.reading.run(input);
   }
@@ -136,12 +173,22 @@ async function runMode(
       delta: payload.delta,
       contextBefore: payload.contextBefore,
       lastQuestionKind: payload.lastQuestionKind,
+      brief: docContext.brief,
     };
     return services.modeEngines.interrogation.run(input);
+  }
+  if (payload.mode === "echo") {
+    const input: EchoEngineInput = {
+      fullText: payload.delta.fullText,
+      brief: docContext.brief,
+    };
+    return services.modeEngines.echo.run(input);
   }
   const input: CriticEngineInput = {
     delta: payload.delta,
     contextBefore: payload.contextBefore,
+    brief: docContext.brief,
+    pact: docContext.pact,
   };
   return services.modeEngines.critic.run(input);
 }
@@ -175,6 +222,9 @@ function tagOutput(mode: ModeName, output: unknown): ModeOutput {
   }
   if (mode === "interrogation") {
     return { mode: "interrogation", result: output as InterrogationOutput };
+  }
+  if (mode === "echo") {
+    return { mode: "echo", result: output as EchoOutput };
   }
   return { mode: "critic", result: output as CriticOutput };
 }

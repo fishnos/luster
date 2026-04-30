@@ -1,40 +1,40 @@
 import { z } from "zod";
 import type { AiClient } from "@/core/aiClient";
-import type { CommitDelta } from "@/adapters/types";
-import type { DocStats } from "@/core/stats";
-import type { ProviderId, ReadingOutput, TokenUsage } from "@/core/types";
+import type { EchoOutput, ProviderId, TokenUsage } from "@/core/types";
+import { findRepeatedPhrases } from "@/core/echoLocal";
 import { safeParse } from "@/core/modes/parse";
 import {
   SYSTEM_PROMPT,
   VERSION,
   buildUserPrompt,
-} from "@/core/modes/prompts/reading";
+} from "@/core/modes/prompts/echo";
 
-const ReadingOutputSchema = z.object({
-  voiceTrend: z.string().min(1),
-  rhythm: z.string().min(1),
-  paragraphPurpose: z.string().min(1),
-  transitionStrength: z.string().min(1),
-  notes: z.array(z.string().min(1)).max(8).default([]),
+const EchoEntrySchema = z.object({
+  phrase: z.string().min(1).max(120),
+  kind: z.enum(["phrase", "image", "concept"]),
+  occurrences: z.coerce.number().int().min(2),
+  note: z.string().min(1).max(160),
 });
 
-export interface ReadingEngineInput {
-  delta: CommitDelta;
-  stats: DocStats;
-  contextBefore: string;
+const EchoOutputSchema = z.object({
+  echoes: z.array(EchoEntrySchema).max(8).default([]),
+});
+
+export interface EchoEngineInput {
+  fullText: string;
   brief?: string;
 }
 
-export type ReadingEngineFailureReason =
+export type EchoEngineFailureReason =
   | "no-key"
   | "rate-limited"
   | "provider-error"
   | "parse-error";
 
-export type ReadingEngineResult =
+export type EchoEngineResult =
   | {
       ok: true;
-      output: ReadingOutput;
+      output: EchoOutput;
       tokens: TokenUsage;
       provider: ProviderId;
       model: string;
@@ -42,32 +42,33 @@ export type ReadingEngineResult =
     }
   | {
       ok: false;
-      reason: ReadingEngineFailureReason;
+      reason: EchoEngineFailureReason;
       provider?: ProviderId;
       retryAfterMs?: number;
       error?: string;
     };
 
-export interface ReadingEngineDeps {
+export interface EchoEngineDeps {
   aiClient: AiClient;
 }
 
-export interface ReadingEngine {
-  run: (input: ReadingEngineInput) => Promise<ReadingEngineResult>;
+export interface EchoEngine {
+  run: (input: EchoEngineInput) => Promise<EchoEngineResult>;
 }
 
-export function createReadingEngine(deps: ReadingEngineDeps): ReadingEngine {
+export function createEchoEngine(deps: EchoEngineDeps): EchoEngine {
   return {
     async run(input) {
+      const localPhrases = findRepeatedPhrases(input.fullText);
+
       const aiResponse = await deps.aiClient.runForMode({
-        mode: "reading",
+        mode: "echo",
         systemPrompt: SYSTEM_PROMPT,
         cacheableSystem: true,
         userPrompt: buildUserPrompt({
-          paragraph: input.delta.paragraph,
-          stats: input.stats,
-          contextBefore: input.contextBefore,
+          fullText: input.fullText,
           brief: input.brief,
+          localPhrases,
         }),
         expectJson: true,
         maxTokens: 2048,
@@ -84,7 +85,7 @@ export function createReadingEngine(deps: ReadingEngineDeps): ReadingEngine {
         };
       }
 
-      const parsed = safeParse(ReadingOutputSchema, aiResponse.text);
+      const parsed = safeParse(EchoOutputSchema, aiResponse.text);
       if (!parsed.ok) {
         return {
           ok: false,
@@ -96,7 +97,10 @@ export function createReadingEngine(deps: ReadingEngineDeps): ReadingEngine {
 
       return {
         ok: true,
-        output: parsed.data,
+        output: {
+          echoes: parsed.data.echoes,
+          localPhrases,
+        },
         tokens: aiResponse.tokens,
         provider: aiResponse.provider,
         model: aiResponse.model,

@@ -5,6 +5,7 @@ import {
   type InterrogationEngine,
 } from "@/core/modes/interrogation";
 import { createCriticEngine, type CriticEngine } from "@/core/modes/critic";
+import { createEchoEngine, type EchoEngine } from "@/core/modes/echo";
 
 export interface ModeEnginesDeps {
   aiClient: AiClient;
@@ -14,6 +15,7 @@ export interface ModeEngines {
   reading: ReadingEngine;
   interrogation: InterrogationEngine;
   critic: CriticEngine;
+  echo: EchoEngine;
 }
 
 export function createModeEngines(deps: ModeEnginesDeps): ModeEngines {
@@ -21,6 +23,7 @@ export function createModeEngines(deps: ModeEnginesDeps): ModeEngines {
     reading: createReadingEngine(deps),
     interrogation: createInterrogationEngine(deps),
     critic: createCriticEngine(deps),
+    echo: createEchoEngine(deps),
   };
 }
 
@@ -39,3 +42,8 @@ export type {
   CriticEngineInput,
   CriticEngineResult,
 } from "@/core/modes/critic";
+export type {
+  EchoEngine,
+  EchoEngineInput,
+  EchoEngineResult,
+} from "@/core/modes/echo";

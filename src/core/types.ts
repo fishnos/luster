@@ -1,6 +1,6 @@
 export type ProviderId = "anthropic" | "openai" | "gemini";
 
-export type ModeName = "reading" | "interrogation" | "critic";
+export type ModeName = "reading" | "interrogation" | "critic" | "echo";
 
 export interface ProviderModel {
   provider: ProviderId;
@@ -41,10 +41,25 @@ export interface CriticOutput {
   issues: CriticIssue[];
 }
 
+export type EchoKind = "phrase" | "image" | "concept";
+
+export interface EchoEntry {
+  phrase: string;
+  kind: EchoKind;
+  occurrences: number;
+  note: string;
+}
+
+export interface EchoOutput {
+  echoes: EchoEntry[];
+  localPhrases: { phrase: string; count: number }[];
+}
+
 export type ModeOutput =
   | { mode: "reading"; result: ReadingOutput }
   | { mode: "interrogation"; result: InterrogationOutput }
-  | { mode: "critic"; result: CriticOutput };
+  | { mode: "critic"; result: CriticOutput }
+  | { mode: "echo"; result: EchoOutput };
 
 export interface TokenUsage {
   input: number;

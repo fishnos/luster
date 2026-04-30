@@ -1,4 +1,9 @@
-export const VERSION = "critic-v3-json-strict";
+import {
+  renderBriefBlock,
+  renderPactDirective,
+} from "@/core/modes/prompts/_brief";
+
+export const VERSION = "critic-v4-brief-pact";
 
 export type CriticSeverity = "structural" | "clarity" | "rhythm" | "nit";
 
@@ -45,11 +50,18 @@ export interface CriticPromptInput {
   sentence: string;
   paragraph: string;
   contextBefore: string;
+  brief?: string;
+  pact?: string;
 }
 
 export function buildUserPrompt(input: CriticPromptInput): string {
   const trimmedContext = input.contextBefore.trim();
-  const sections = [
+  const briefBlock = renderBriefBlock(input.brief ?? "");
+  const pactBlock = renderPactDirective(input.pact ?? "");
+  const sections: string[] = [];
+  if (briefBlock.length > 0) sections.push(briefBlock);
+  if (pactBlock.length > 0) sections.push(pactBlock);
+  sections.push(
     `## Context (Prior Flow)`,
     trimmedContext.length === 0 ? "(beginning of document)" : trimmedContext,
     ``,
@@ -60,6 +72,6 @@ export function buildUserPrompt(input: CriticPromptInput): string {
     input.sentence,
     ``,
     `Analyze the target sentence. Reply with the JSON object only.`,
-  ];
+  );
   return sections.join("\n");
 }

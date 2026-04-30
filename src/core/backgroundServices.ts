@@ -2,6 +2,7 @@ import { createAiClient, type AiClient } from "@/core/aiClient";
 import { createKeyVault, type KeyVault } from "@/core/keyVault";
 import { createRateLimiter, type RateLimiter } from "@/core/rateLimiter";
 import { createHistoryStore, type HistoryStore } from "@/core/history";
+import { createDocContextStore, type DocContextStore } from "@/core/docContext";
 import {
   createBrowserLocalStorage,
   type StorageBackend,
@@ -16,6 +17,7 @@ export interface BackgroundServices {
   keyVault: KeyVault;
   rateLimiter: RateLimiter;
   historyStore: HistoryStore;
+  docContextStore: DocContextStore;
   modeEngines: ModeEngines;
 }
 
@@ -35,6 +37,7 @@ export function createBackgroundServices(
     defaultCallsPerMinute: options.defaultCallsPerMinute ?? 20,
   });
   const historyStore = createHistoryStore(storage);
+  const docContextStore = createDocContextStore(storage);
   const aiClient = createAiClient({
     keyVault,
     rateLimiter,
@@ -46,5 +49,12 @@ export function createBackgroundServices(
   });
   const modeEngines = createModeEngines({ aiClient });
 
-  return { aiClient, keyVault, rateLimiter, historyStore, modeEngines };
+  return {
+    aiClient,
+    keyVault,
+    rateLimiter,
+    historyStore,
+    docContextStore,
+    modeEngines,
+  };
 }

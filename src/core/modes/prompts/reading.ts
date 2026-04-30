@@ -1,6 +1,7 @@
 import type { DocStats } from "@/core/stats";
+import { renderBriefBlock } from "@/core/modes/prompts/_brief";
 
-export const VERSION = "reading-v2-json-strict";
+export const VERSION = "reading-v3-brief";
 
 export const SYSTEM_PROMPT = `You are a senior literary editor reading a writer's draft as it is written. Your job is to give a precise, observational read-back of the most recent paragraph. Your goal is to help the writer perceive what their prose is doing, not to rewrite it.
 
@@ -33,10 +34,14 @@ export interface ReadingPromptInput {
   paragraph: string;
   stats: DocStats;
   contextBefore: string;
+  brief?: string;
 }
 
 export function buildUserPrompt(input: ReadingPromptInput): string {
-  const sections = [
+  const briefBlock = renderBriefBlock(input.brief ?? "");
+  const sections: string[] = [];
+  if (briefBlock.length > 0) sections.push(briefBlock);
+  sections.push(
     `## Stats`,
     condenseStats(input.stats),
     ``,
@@ -49,7 +54,7 @@ export function buildUserPrompt(input: ReadingPromptInput): string {
     input.paragraph,
     ``,
     `Reply with the JSON object only.`,
-  ];
+  );
   return sections.join("\n");
 }
 

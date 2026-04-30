@@ -11,7 +11,7 @@ import { createBrowserLocalStorage } from "@/core/storageBackend";
 import { sendValidateKey } from "@/core/sendRequest";
 
 const PROVIDERS: ProviderId[] = ["gemini", "anthropic", "openai"];
-const MODES: ModeName[] = ["reading", "interrogation", "critic"];
+const MODES: ModeName[] = ["reading", "interrogation", "critic", "echo"];
 
 const PROVIDER_LABEL: Record<ProviderId, string> = {
   gemini: "Gemini",
@@ -35,12 +35,14 @@ const MODE_LABEL: Record<ModeName, string> = {
   reading: "Reading",
   interrogation: "Interrogation",
   critic: "Critic",
+  echo: "Echo",
 };
 
 const MODE_DESCRIPTION: Record<ModeName, string> = {
   reading: "Editor read-back of voice, rhythm, and transitions.",
   interrogation: "Asks craft and intent questions. No critique.",
   critic: "Calls out structural and connection issues live.",
+  echo: "Mirrors phrases, images, and concepts you keep returning to.",
 };
 
 const storage = createBrowserLocalStorage();

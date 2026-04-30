@@ -7,6 +7,8 @@ import type {
   ValidateKeyResultData,
 } from "@/core/messaging";
 import type { HistoryEntry } from "@/core/history";
+import type { DocContext } from "@/core/docContext";
+import { EMPTY_DOC_CONTEXT } from "@/core/docContext";
 
 export async function sendRequest(
   request: LusterRequest,
@@ -45,4 +47,91 @@ export async function sendGetHistory(docId: string): Promise<HistoryEntry[]> {
   });
   if (!response.ok) return [];
   return (response.data ?? []) as HistoryEntry[];
+}
+
+export async function sendGetDocContext(docId: string): Promise<DocContext> {
+  const response = await sendRequest({
+    type: "doc-context/get",
+    payload: { docId },
+  });
+  if (!response.ok) return { ...EMPTY_DOC_CONTEXT };
+  return response.data as DocContext;
+}
+
+export async function sendSetDocContextBrief(
+  docId: string,
+  brief: string,
+): Promise<void> {
+  await sendRequest({
+    type: "doc-context/set-brief",
+    payload: { docId, brief },
+  });
+}
+
+export async function sendSetDocContextPact(
+  docId: string,
+  pact: string,
+): Promise<void> {
+  await sendRequest({
+    type: "doc-context/set-pact",
+    payload: { docId, pact },
+  });
+}
+
+export async function sendSetDocContextAutoMode(
+  docId: string,
+  autoMode: boolean,
+): Promise<void> {
+  await sendRequest({
+    type: "doc-context/set-auto-mode",
+    payload: { docId, autoMode },
+  });
+}
+
+export async function sendGetDefaultBrief(): Promise<string> {
+  const response = await sendRequest({
+    type: "doc-context/get-default-brief",
+    payload: {},
+  });
+  if (!response.ok) return "";
+  return typeof response.data === "string" ? response.data : "";
+}
+
+export async function sendSetDefaultBrief(brief: string): Promise<void> {
+  await sendRequest({
+    type: "doc-context/set-default-brief",
+    payload: { brief },
+  });
+}
+
+export async function sendRunEchoScan(args: {
+  docId: string;
+  fullText: string;
+}): Promise<RunModeResultData> {
+  return sendRunMode({
+    mode: "echo",
+    docId: args.docId,
+    delta: {
+      reason: "flush",
+      sentence: "",
+      paragraph: "",
+      fullText: args.fullText,
+      sentenceIndex: 0,
+      paragraphIndex: 0,
+    },
+    stats: {
+      words: 0,
+      sentences: 0,
+      paragraphs: 0,
+      characters: 0,
+      avgSentenceWords: 0,
+      longestSentenceWords: 0,
+      fleschKincaidGrade: 0,
+      passiveRatio: 0,
+      repeatedOpeners: [],
+      topWords: [],
+    },
+    contextBefore: "",
+    lastQuestionKind: null,
+  });
 }

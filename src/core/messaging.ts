@@ -115,6 +115,36 @@ export interface ClearHistoryRequest {
   payload: { docId?: string };
 }
 
+export interface GetDocContextRequest {
+  type: "doc-context/get";
+  payload: { docId: string };
+}
+
+export interface SetDocContextBriefRequest {
+  type: "doc-context/set-brief";
+  payload: { docId: string; brief: string };
+}
+
+export interface SetDocContextPactRequest {
+  type: "doc-context/set-pact";
+  payload: { docId: string; pact: string };
+}
+
+export interface SetDocContextAutoModeRequest {
+  type: "doc-context/set-auto-mode";
+  payload: { docId: string; autoMode: boolean };
+}
+
+export interface GetDefaultBriefRequest {
+  type: "doc-context/get-default-brief";
+  payload: Record<string, never>;
+}
+
+export interface SetDefaultBriefRequest {
+  type: "doc-context/set-default-brief";
+  payload: { brief: string };
+}
+
 export type LusterRequest =
   | RunModeRequest
   | ValidateKeyRequest
@@ -127,7 +157,13 @@ export type LusterRequest =
   | AppendHistoryRequest
   | GetHistoryRequest
   | ExportHistoryRequest
-  | ClearHistoryRequest;
+  | ClearHistoryRequest
+  | GetDocContextRequest
+  | SetDocContextBriefRequest
+  | SetDocContextPactRequest
+  | SetDocContextAutoModeRequest
+  | GetDefaultBriefRequest
+  | SetDefaultBriefRequest;
 
 export interface OkResponse<TData = undefined> {
   ok: true;

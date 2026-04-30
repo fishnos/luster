@@ -1,4 +1,4 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import type { ModeName } from "@/core/types";
 import { Button } from "@/ui/components/ui/button";
@@ -9,13 +9,21 @@ import { StatusDot } from "@/ui/components/StatusDot";
 import { ModeReading } from "@/ui/ModeReading";
 import { ModeInterrogation } from "@/ui/ModeInterrogation";
 import { ModeCritic } from "@/ui/ModeCritic";
+import { ModeEcho } from "@/ui/ModeEcho";
 import { ModeSegment } from "@/ui/ModeSegment";
+import { sendRunEchoScan } from "@/core/sendRequest";
 import { StatsPanel } from "@/ui/StatsPanel";
+import { DocContextRow } from "@/ui/DocContextRow";
 import { ConnectBanner } from "@/ui/ConnectBanner";
 import { EditorHint, runDocsDiagnostic } from "@/ui/EditorHint";
 import { InlineSettings } from "@/ui/InlineSettings";
 import { useOverlayState } from "@/ui/useOverlayState";
-import type { OverlayController, OverlayState } from "@/ui/state";
+import type {
+  AutoModeReason,
+  AutoModeStatus,
+  OverlayController,
+  OverlayState,
+} from "@/ui/state";
 import { cn } from "@/ui/cn";
 
 const EASE_OUT = [0.23, 1, 0.32, 1] as const;
@@ -250,11 +258,24 @@ function MainView({
 
       <StatsPanel stats={state.stats} />
 
+      <DocContextRow controller={controller} state={state} />
+
       <ModeSegment
         active={state.activeMode}
         modes={state.modes}
-        onSelect={(mode) => controller.setActiveMode(mode)}
+        onSelect={(mode) => {
+          controller.setActiveMode(mode);
+          if (state.docContext.autoMode) {
+            controller.setAutoModeStatus({
+              active: true,
+              lastSwitchReason: null,
+              lastSwitchAt: Date.now(),
+            });
+          }
+        }}
       />
+
+      <AutoSwitchToast status={state.autoModeStatus} />
 
       <AnimatePresence mode="wait" initial={false}>
         <motion.div
@@ -281,6 +302,47 @@ function MainView({
               controller={controller}
               info={state.modes.critic}
               sentence={state.criticSentence}
+            />
+          )}
+          {state.activeMode === "echo" && (
+            <ModeEcho
+              controller={controller}
+              info={state.modes.echo}
+              fullText={state.fullText}
+              onScan={async () => {
+                if (!state.docId || state.fullText.trim().length === 0) return;
+                controller.markModePending("echo");
+                const result = await sendRunEchoScan({
+                  docId: state.docId,
+                  fullText: state.fullText,
+                });
+                if (!result.ok) {
+                  if (result.reason === "rate-limited") {
+                    controller.setModeRateLimited(
+                      "echo",
+                      result.retryAfterMs ?? 60_000,
+                    );
+                  } else if (result.reason === "no-key") {
+                    controller.setModeError(
+                      "echo",
+                      `No API key for ${
+                        result.provider ?? "the active provider"
+                      }. Open Luster settings to add one.`,
+                    );
+                  } else {
+                    controller.setModeError(
+                      "echo",
+                      result.error ?? result.reason,
+                    );
+                  }
+                  return;
+                }
+                controller.setModeOutput(
+                  "echo",
+                  result.output,
+                  result.provider,
+                );
+              }}
             />
           )}
         </motion.div>
@@ -322,6 +384,43 @@ function MainView({
         </p>
       )}
     </>
+  );
+}
+
+const AUTO_REASON_TEXT: Record<AutoModeReason, string> = {
+  "drafting-paragraph-commit": "Switched to Reading — paragraph just landed.",
+  "thinking-pause": "Switched to Interrogation — long pause detected.",
+  "revising-edits": "Switched to Critic — heavy revision in last 30s.",
+  "polishing-touchups": "Switched to Critic — small targeted edits.",
+  "flow-suppress": "Holding mode — you're in flow.",
+};
+
+function AutoSwitchToast({ status }: { status: AutoModeStatus }) {
+  const [visible, setVisible] = useState(false);
+  const lastSwitchAt = status.lastSwitchAt;
+  const reason = status.lastSwitchReason;
+
+  useEffect(() => {
+    if (!status.active || lastSwitchAt === null || reason === null) {
+      setVisible(false);
+      return;
+    }
+    setVisible(true);
+    const timer = window.setTimeout(() => setVisible(false), 4000);
+    return () => window.clearTimeout(timer);
+  }, [status.active, lastSwitchAt, reason]);
+
+  if (!visible || reason === null) return null;
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -2 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -2 }}
+      transition={{ duration: 0.18, ease: EASE_OUT }}
+      className="text-[11px] italic text-luster-faint"
+    >
+      {AUTO_REASON_TEXT[reason]}
+    </motion.div>
   );
 }
 

@@ -1,4 +1,4 @@
-import { Eye, HelpCircle, Target } from "lucide-react";
+import { Eye, HelpCircle, Repeat, Target } from "lucide-react";
 import type { ComponentType } from "react";
 import type { ModeName } from "@/core/types";
 import type { ModeOverlayInfo } from "@/ui/state";
@@ -14,6 +14,7 @@ const TABS: TabSpec[] = [
   { mode: "reading", label: "Reading", Icon: Eye },
   { mode: "interrogation", label: "Interrogation", Icon: HelpCircle },
   { mode: "critic", label: "Critic", Icon: Target },
+  { mode: "echo", label: "Echo", Icon: Repeat },
 ];
 
 export interface ModeSegmentProps {

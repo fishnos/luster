@@ -26,6 +26,7 @@ export interface InterrogationEngineInput {
   delta: CommitDelta;
   contextBefore: string;
   lastQuestionKind: QuestionKind | null;
+  brief?: string;
 }
 
 export type InterrogationEngineFailureReason =
@@ -72,6 +73,7 @@ export function createInterrogationEngine(
           sentence: input.delta.sentence,
           contextBefore: input.contextBefore,
           lastQuestionKind: input.lastQuestionKind,
+          brief: input.brief,
         }),
         expectJson: true,
         maxTokens: 2048,

@@ -105,6 +105,34 @@ describe("notionAdapter.attach", () => {
     expect(commits[0]!.sentence).toBe("First.");
     handle.detach();
   });
+
+  it("ignores block chrome inside contenteditable=false and aria-hidden wrappers", () => {
+    document.body.innerHTML = `
+      <div class="notion-page-content">
+        <div data-block-id="a">
+          <div contenteditable="false" role="button" aria-label="Drag handle">Drag</div>
+          <div aria-hidden="true">Click for menu</div>
+          <span data-placeholder="Type something">Type something</span>
+          <span>Real writing.</span>
+        </div>
+      </div>
+    `;
+    const handle = notionAdapter.attach(document);
+    expect(handle.readText()).toBe("Real writing.");
+    handle.detach();
+  });
+
+  it("returns empty string for a page with no editable blocks", () => {
+    document.body.innerHTML = `
+      <div class="notion-page-content">
+        <div contenteditable="false" role="toolbar">+ New page</div>
+        <div aria-hidden="true">Untitled</div>
+      </div>
+    `;
+    const handle = notionAdapter.attach(document);
+    expect(handle.readText()).toBe("");
+    handle.detach();
+  });
 });
 
 describe("googleDocsAdapter.attach (canvas bridge client)", () => {

@@ -5,10 +5,11 @@ import type { ModeName } from "@/core/types";
 import type { QuestionKind } from "@/core/modes/prompts/interrogation";
 import { computeStats } from "@/core/stats";
 import { docIdFor } from "@/lib/docId";
-import { sendRunMode } from "@/core/sendRequest";
+import { sendGetDocContext, sendRunMode } from "@/core/sendRequest";
 import { splitParagraphs } from "@/lib/sentenceSplit";
 import { createKeyVault } from "@/core/keyVault";
 import { createBrowserLocalStorage } from "@/core/storageBackend";
+import { createDynamicModeSelector } from "@/core/dynamicMode";
 
 const CONTEXT_PARAGRAPH_WINDOW = 3;
 const COMMIT_QUIET_MS = 1200;
@@ -38,10 +39,36 @@ export function bootstrapAdapter(
 
   const handle: AdapterHandle = deps.adapter.attach(hostDocument);
   const docId = docIdFor(hostWindow.location.href, hostDocument.title);
+  deps.controller.setDocId(docId);
   let lastQuestionKind: QuestionKind | null = null;
+
+  const dynamicModeSelector = createDynamicModeSelector({
+    isEnabled: () => deps.controller.getState().docContext.autoMode,
+    isPactSet: () =>
+      deps.controller.getState().docContext.pact.trim().length > 0,
+    getActiveMode: () => deps.controller.getState().activeMode,
+    applySwitch: (mode, reason) => {
+      deps.controller.setActiveModeFromAuto(mode, reason);
+    },
+  });
+
+  let lastObservedActiveMode = deps.controller.getState().activeMode;
+  const unsubscribeManualOverride = deps.controller.subscribe(() => {
+    const state = deps.controller.getState();
+    const next = state.activeMode;
+    if (next === lastObservedActiveMode) return;
+    const status = state.autoModeStatus;
+    const recentlyAuto =
+      status.lastSwitchAt !== null && Date.now() - status.lastSwitchAt < 200;
+    if (!recentlyAuto) {
+      dynamicModeSelector.noteManualSwitch();
+    }
+    lastObservedActiveMode = next;
+  });
 
   if (!deps.runMode) {
     void hydrateSettings(deps.controller);
+    void hydrateDocContext(deps.controller, docId);
   }
 
   const unsubscribeText = handle.onTextChange((text) => {
@@ -52,6 +79,8 @@ export function bootstrapAdapter(
       );
     }
     deps.controller.setStats(stats);
+    deps.controller.setFullText(text);
+    dynamicModeSelector.recordTextChange(text);
   });
 
   let lastCaretPopupData: import("@/core/types").CaretPopupData | null = null;
@@ -126,6 +155,7 @@ export function bootstrapAdapter(
   }
 
   const unsubscribeCommit = handle.onCommit((delta) => {
+    dynamicModeSelector.recordCommit(delta);
     const state = deps.controller.getState();
     const activeMode = state.activeMode;
     pendingCommit = { mode: activeMode, delta };
@@ -233,6 +263,8 @@ export function bootstrapAdapter(
       unsubscribeCaret();
       unsubscribeCommit();
       unsubscribeMode();
+      unsubscribeManualOverride();
+      dynamicModeSelector.detach();
       handle.detach();
     },
   };
@@ -243,6 +275,23 @@ function computeContextBefore(delta: CommitDelta): string {
   const targetIndex = Math.min(delta.paragraphIndex, paragraphs.length - 1);
   const start = Math.max(0, targetIndex - CONTEXT_PARAGRAPH_WINDOW);
   return paragraphs.slice(start, targetIndex).join("\n\n");
+}
+
+async function hydrateDocContext(
+  controller: OverlayController,
+  docId: string,
+): Promise<void> {
+  try {
+    const context = await sendGetDocContext(docId);
+    controller.setDocContext(context);
+    controller.setAutoModeStatus({
+      active: context.autoMode,
+      lastSwitchReason: null,
+      lastSwitchAt: null,
+    });
+  } catch {
+    // ignore
+  }
 }
 
 async function hydrateSettings(controller: OverlayController): Promise<void> {

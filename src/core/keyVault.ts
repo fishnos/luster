@@ -2,7 +2,7 @@ import type { ModeName, ProviderId } from "@/core/types";
 import type { StorageBackend } from "@/core/storageBackend";
 
 const PROVIDER_IDS: ProviderId[] = ["anthropic", "openai", "gemini"];
-const MODE_NAMES: ModeName[] = ["reading", "interrogation", "critic"];
+const MODE_NAMES: ModeName[] = ["reading", "interrogation", "critic", "echo"];
 
 const KEY_PREFIX = "luster.key.";
 const MODEL_PREFIX = "luster.model.";

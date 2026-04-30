@@ -1,4 +1,6 @@
-export const VERSION = "interrogation-v2-json-strict";
+import { renderBriefBlock } from "@/core/modes/prompts/_brief";
+
+export const VERSION = "interrogation-v3-brief";
 
 export type QuestionKind = "intent" | "craft" | "reader";
 
@@ -36,10 +38,14 @@ export interface InterrogationPromptInput {
   sentence: string;
   contextBefore: string;
   lastQuestionKind: QuestionKind | null;
+  brief?: string;
 }
 
 export function buildUserPrompt(input: InterrogationPromptInput): string {
-  const sections = [
+  const briefBlock = renderBriefBlock(input.brief ?? "");
+  const sections: string[] = [];
+  if (briefBlock.length > 0) sections.push(briefBlock);
+  sections.push(
     `## Recent context`,
     input.contextBefore.trim().length === 0
       ? "(no prior context)"
@@ -52,6 +58,6 @@ export function buildUserPrompt(input: InterrogationPromptInput): string {
     input.lastQuestionKind ?? "none",
     ``,
     `Reply with the JSON object only. Prefer a different kind than the last one unless the sentence demands the same kind.`,
-  ];
+  );
   return sections.join("\n");
 }
