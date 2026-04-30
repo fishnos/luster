@@ -14,7 +14,6 @@ export type Phase = "drafting" | "thinking" | "revising" | "polishing" | "flow";
 
 export interface DynamicModeSelectorDeps {
   isEnabled: () => boolean;
-  isPactSet: () => boolean;
   getActiveMode: () => ModeName;
   applySwitch: (mode: ModeName, reason: AutoModeReason) => void;
   now?: () => number;
@@ -74,7 +73,7 @@ export function createDynamicModeSelector(
 
     if (phase.score < CONFIDENCE_FLOOR) return null;
 
-    const targetMode = pickModeForPhase(phase.phase, deps.isPactSet());
+    const targetMode = pickModeForPhase(phase.phase);
     if (!targetMode) return phase.phase;
 
     if (targetMode.mode === deps.getActiveMode()) {
@@ -248,7 +247,6 @@ function classifyPhase(
 
 function pickModeForPhase(
   phase: Phase,
-  pactSet: boolean,
 ): { mode: ModeName; reason: AutoModeReason } | null {
   if (phase === "flow") return null;
   if (phase === "drafting") {
@@ -258,10 +256,7 @@ function pickModeForPhase(
     return { mode: "interrogation", reason: "thinking-pause" };
   }
   if (phase === "revising") {
-    return {
-      mode: "critic",
-      reason: pactSet ? "revising-edits" : "revising-edits",
-    };
+    return { mode: "critic", reason: "revising-edits" };
   }
   return { mode: "critic", reason: "polishing-touchups" };
 }

@@ -108,30 +108,9 @@ export async function sendRunEchoScan(args: {
   docId: string;
   fullText: string;
 }): Promise<RunModeResultData> {
-  return sendRunMode({
-    mode: "echo",
-    docId: args.docId,
-    delta: {
-      reason: "flush",
-      sentence: "",
-      paragraph: "",
-      fullText: args.fullText,
-      sentenceIndex: 0,
-      paragraphIndex: 0,
-    },
-    stats: {
-      words: 0,
-      sentences: 0,
-      paragraphs: 0,
-      characters: 0,
-      avgSentenceWords: 0,
-      longestSentenceWords: 0,
-      fleschKincaidGrade: 0,
-      passiveRatio: 0,
-      repeatedOpeners: [],
-      topWords: [],
-    },
-    contextBefore: "",
-    lastQuestionKind: null,
-  });
+  const response = await sendRequest({ type: "ai/run-echo", payload: args });
+  if (!response.ok) {
+    return { ok: false, reason: "provider-error", error: response.error };
+  }
+  return response.data as RunModeResultData;
 }

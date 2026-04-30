@@ -13,9 +13,10 @@ export function renderBriefBlock(brief: string): string {
 export function renderPactDirective(pact: string): string {
   const trimmed = pact.trim();
   if (trimmed.length === 0) return "";
+  const escaped = trimmed.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
   return [
     "## Active pact",
-    `The writer has set ONE rule for this draft: "${trimmed}".`,
+    `The writer has set ONE rule for this draft: "${escaped}".`,
     'Flag ONLY violations of this pact. Ignore everything else, even if it would normally be worth a note. Stay surgical. If the sentence does not violate the pact, return {"issues": []}.',
     "",
   ].join("\n");

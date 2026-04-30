@@ -20,6 +20,11 @@ export interface RunModeRequest {
   };
 }
 
+export interface RunEchoRequest {
+  type: "ai/run-echo";
+  payload: { docId: string; fullText: string };
+}
+
 export type RunModeFailureReason =
   | "no-key"
   | "rate-limited"
@@ -147,6 +152,7 @@ export interface SetDefaultBriefRequest {
 
 export type LusterRequest =
   | RunModeRequest
+  | RunEchoRequest
   | ValidateKeyRequest
   | SaveKeyRequest
   | ClearKeyRequest

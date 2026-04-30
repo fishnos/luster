@@ -24,9 +24,13 @@ import type {
   OverlayController,
   OverlayState,
 } from "@/ui/state";
+import {
+  EASE_OUT,
+  PANEL_TRANSITION,
+  SECTION_TRANSITION,
+  TAB_TRANSITION,
+} from "@/ui/motion";
 import { cn } from "@/ui/cn";
-
-const EASE_OUT = [0.23, 1, 0.32, 1] as const;
 
 export interface OverlayProps {
   controller: OverlayController;
@@ -61,7 +65,7 @@ function FullPanel({
       initial={{ opacity: 0, y: 6, scale: 0.985 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 6, scale: 0.985 }}
-      transition={{ duration: 0.22, ease: EASE_OUT }}
+      transition={PANEL_TRANSITION}
       style={{
         position: "fixed",
         left: state.position.x,
@@ -86,7 +90,7 @@ function FullPanel({
               initial={{ opacity: 0, y: 4 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -4 }}
-              transition={{ duration: 0.2, ease: EASE_OUT }}
+              transition={SECTION_TRANSITION}
               className="space-y-4"
             >
               <MainView controller={controller} state={state} />
@@ -97,7 +101,7 @@ function FullPanel({
               initial={{ opacity: 0, y: 4 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -4 }}
-              transition={{ duration: 0.2, ease: EASE_OUT }}
+              transition={SECTION_TRANSITION}
             >
               <InlineSettings
                 onBack={() => controller.setView("main")}
@@ -244,7 +248,7 @@ function MainView({
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.2, ease: EASE_OUT }}
+            transition={SECTION_TRANSITION}
             style={{ overflow: "hidden" }}
           >
             <ConnectBanner
@@ -286,7 +290,7 @@ function MainView({
           initial={{ opacity: 0, y: 4 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -4 }}
-          transition={{ duration: 0.16, ease: EASE_OUT }}
+          transition={TAB_TRANSITION}
         >
           {state.activeMode === "reading" && (
             <ModeReading controller={controller} info={state.modes.reading} />

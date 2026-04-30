@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ComponentType } from "react";
+import { useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Activity,
@@ -18,10 +18,11 @@ import {
   sendSetDocContextPact,
 } from "@/core/sendRequest";
 import type { OverlayController, OverlayState } from "@/ui/state";
+import { SECTION_TRANSITION, type LusterIcon } from "@/ui/motion";
 import { cn } from "@/ui/cn";
 
 interface PactPreset {
-  Icon: ComponentType<{ size?: number; className?: string }>;
+  Icon: LusterIcon;
   title: string;
   hint: string;
   rule: string;
@@ -60,13 +61,7 @@ const PACT_PRESETS: PactPreset[] = [
   },
 ];
 
-const EASE_OUT = [0.23, 1, 0.32, 1] as const;
-
 type EditorTarget = "brief" | "pact" | null;
-
-const INPUT_STYLE: React.CSSProperties = {
-  caretColor: "currentColor",
-};
 
 export interface DocContextRowProps {
   controller: OverlayController;
@@ -80,9 +75,6 @@ export function DocContextRow({ controller, state }: DocContextRowProps) {
   const pactValue = state.docContext.pact;
   const autoModeOn = state.docContext.autoMode;
 
-  const briefFilled = briefValue.trim().length > 0;
-  const pactFilled = pactValue.trim().length > 0;
-
   function chooseTarget(target: EditorTarget): void {
     setOpenTarget((current) => (current === target ? null : target));
   }
@@ -93,14 +85,14 @@ export function DocContextRow({ controller, state }: DocContextRowProps) {
         <ContextPill
           label="Brief"
           FilledIcon={FileText}
-          isFilled={briefFilled}
+          isFilled={briefValue.trim().length > 0}
           isActive={openTarget === "brief"}
           onClick={() => chooseTarget("brief")}
         />
         <ContextPill
           label="Pact"
           FilledIcon={Crosshair}
-          isFilled={pactFilled}
+          isFilled={pactValue.trim().length > 0}
           isActive={openTarget === "pact"}
           onClick={() => chooseTarget("pact")}
         />
@@ -129,21 +121,23 @@ export function DocContextRow({ controller, state }: DocContextRowProps) {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.2, ease: EASE_OUT }}
+            transition={SECTION_TRANSITION}
             style={{ overflow: "hidden" }}
           >
             {openTarget === "brief" ? (
               <BriefEditor
+                key={`brief:${briefValue}`}
                 controller={controller}
                 docId={docId}
-                value={briefValue}
+                initialValue={briefValue}
                 onClose={() => setOpenTarget(null)}
               />
             ) : (
               <PactEditor
+                key={`pact:${pactValue}`}
                 controller={controller}
                 docId={docId}
-                value={pactValue}
+                initialValue={pactValue}
                 onClose={() => setOpenTarget(null)}
               />
             )}
@@ -162,11 +156,7 @@ function ContextPill({
   onClick,
 }: {
   label: string;
-  FilledIcon: ComponentType<{
-    size?: number;
-    strokeWidth?: number;
-    className?: string;
-  }>;
+  FilledIcon: LusterIcon;
   isFilled: boolean;
   isActive: boolean;
   onClick: () => void;
@@ -204,82 +194,43 @@ function ContextPill({
   );
 }
 
-function BriefEditor({
-  controller,
-  docId,
-  value,
-  onClose,
-}: {
-  controller: OverlayController;
-  docId: string | null;
-  value: string;
-  onClose: () => void;
-}) {
-  const [draft, setDraft] = useState(value);
-  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+interface EditorShellProps {
+  title: string;
+  hasValue: boolean;
+  onClear: () => void;
+  onDone: () => void;
+  trailing?: React.ReactNode;
+  children: React.ReactNode;
+}
 
-  useEffect(() => {
-    setDraft(value);
-  }, [value]);
-
-  useEffect(() => {
-    textareaRef.current?.focus();
-  }, []);
-
-  async function commit(next: string): Promise<void> {
-    const sliced = next.slice(0, DOC_BRIEF_MAX_LENGTH);
-    controller.setBrief(sliced);
-    if (docId) await sendSetDocContextBrief(docId, sliced);
-  }
-
+function EditorShell({
+  title,
+  hasValue,
+  onClear,
+  onDone,
+  trailing,
+  children,
+}: EditorShellProps) {
   return (
-    <div className="space-y-1.5 rounded-md bg-luster-subtle/40 p-2">
+    <div className="space-y-2 rounded-md bg-luster-subtle/40 p-2.5">
       <div className="flex items-center justify-between">
-        <span className="luster-eyebrow">Writer's brief</span>
+        <span className="luster-eyebrow">{title}</span>
         <div className="flex items-center gap-2">
-          {value.trim().length > 0 && (
+          {hasValue && (
             <button
               type="button"
               className="luster-btn-text hover:!text-luster-err"
-              onClick={async () => {
-                setDraft("");
-                await commit("");
-              }}
+              onClick={onClear}
             >
               Clear
             </button>
           )}
-          <span className="text-[10px] text-luster-faint">
-            {draft.length}/{DOC_BRIEF_MAX_LENGTH}
-          </span>
+          {trailing}
         </div>
       </div>
-      <textarea
-        ref={textareaRef}
-        rows={4}
-        value={draft}
-        onChange={(event) =>
-          setDraft(event.target.value.slice(0, DOC_BRIEF_MAX_LENGTH))
-        }
-        onBlur={() => commit(draft)}
-        placeholder="What is this draft? Genre, audience, constraints, what you're trying to do…"
-        spellCheck={true}
-        style={{
-          ...INPUT_STYLE,
-          padding: "8px 12px",
-          lineHeight: 1.45,
-        }}
-        className="luster-glass-input block w-full resize-y text-[12.5px] font-medium"
-      />
+      {children}
       <div className="flex justify-end">
-        <button
-          type="button"
-          onClick={async () => {
-            await commit(draft);
-            onClose();
-          }}
-          className="luster-btn-text"
-        >
+        <button type="button" onClick={onDone} className="luster-btn-text">
           Done
         </button>
       </div>
@@ -287,123 +238,160 @@ function BriefEditor({
   );
 }
 
-function PactEditor({
-  controller,
-  docId,
-  value,
-  onClose,
-}: {
+interface BriefEditorProps {
   controller: OverlayController;
   docId: string | null;
-  value: string;
+  initialValue: string;
   onClose: () => void;
-}) {
-  const [draft, setDraft] = useState(value);
-  const inputRef = useRef<HTMLInputElement | null>(null);
+}
 
-  useEffect(() => {
-    setDraft(value);
-  }, [value]);
+function BriefEditor({
+  controller,
+  docId,
+  initialValue,
+  onClose,
+}: BriefEditorProps) {
+  const [draft, setDraft] = useState(initialValue);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
-  async function commit(next: string): Promise<void> {
-    const sliced = next.slice(0, DOC_PACT_MAX_LENGTH);
-    controller.setPact(sliced);
-    if (docId) await sendSetDocContextPact(docId, sliced);
-  }
-
-  function selectPreset(rule: string): void {
-    setDraft(rule);
-    void commit(rule);
+  function commit(next: string): void {
+    const sliced = next.slice(0, DOC_BRIEF_MAX_LENGTH);
+    setDraft(sliced);
+    controller.setBrief(sliced);
+    if (docId) void sendSetDocContextBrief(docId, sliced);
   }
 
   return (
-    <div className="space-y-2.5 rounded-md bg-luster-subtle/40 p-2.5">
-      <div className="flex items-center justify-between">
-        <span className="luster-eyebrow">Pact · one rule</span>
-        {value.trim().length > 0 && (
-          <button
-            type="button"
-            className="luster-btn-text hover:!text-luster-err"
-            onClick={() => {
-              setDraft("");
-              void commit("");
-            }}
-          >
-            Clear
-          </button>
-        )}
-      </div>
+    <EditorShell
+      title="Writer's brief"
+      hasValue={draft.trim().length > 0}
+      onClear={() => commit("")}
+      onDone={onClose}
+      trailing={
+        <span className="text-[10px] text-luster-faint">
+          {draft.length}/{DOC_BRIEF_MAX_LENGTH}
+        </span>
+      }
+    >
+      <textarea
+        ref={textareaRef}
+        rows={4}
+        value={draft}
+        autoFocus
+        onChange={(event) =>
+          setDraft(event.target.value.slice(0, DOC_BRIEF_MAX_LENGTH))
+        }
+        onBlur={() => commit(draft)}
+        placeholder="What is this draft? Genre, audience, constraints, what you're trying to do…"
+        className="luster-glass-input luster-textarea"
+      />
+    </EditorShell>
+  );
+}
 
+interface PactEditorProps {
+  controller: OverlayController;
+  docId: string | null;
+  initialValue: string;
+  onClose: () => void;
+}
+
+function PactEditor({
+  controller,
+  docId,
+  initialValue,
+  onClose,
+}: PactEditorProps) {
+  const [draft, setDraft] = useState(initialValue);
+
+  function commit(next: string): void {
+    const sliced = next.slice(0, DOC_PACT_MAX_LENGTH);
+    setDraft(sliced);
+    controller.setPact(sliced);
+    if (docId) void sendSetDocContextPact(docId, sliced);
+  }
+
+  const matchingPreset = PACT_PRESETS.find(
+    (preset) => preset.rule === draft.trim(),
+  );
+
+  return (
+    <EditorShell
+      title="Pact · one rule"
+      hasValue={draft.trim().length > 0}
+      onClear={() => commit("")}
+      onDone={onClose}
+    >
       <div className="grid grid-cols-2 gap-1.5">
-        {PACT_PRESETS.map((preset) => {
-          const isSelected = draft.trim() === preset.rule;
-          return (
-            <button
-              key={preset.rule}
-              type="button"
-              onClick={() => selectPreset(preset.rule)}
-              className={cn(
-                "luster-press group flex items-start gap-2 rounded-md px-2 py-1.5 text-left transition-all",
-                isSelected
-                  ? "bg-luster-accent/15 ring-1 ring-luster-accent/50"
-                  : "bg-luster-subtle/60 ring-1 ring-luster-ink/5 hover:ring-luster-ink/15",
-              )}
-            >
-              <span
-                className={cn(
-                  "mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md transition-colors",
-                  isSelected
-                    ? "bg-luster-accent/30 text-luster-ink"
-                    : "bg-luster-ink/5 text-luster-muted group-hover:text-luster-ink",
-                )}
-              >
-                <preset.Icon size={11} />
-              </span>
-              <div className="min-w-0 flex-1">
-                <div
-                  className={cn(
-                    "text-[11.5px] font-medium leading-tight transition-colors",
-                    isSelected ? "text-luster-ink" : "text-luster-ink-soft",
-                  )}
-                >
-                  {preset.title}
-                </div>
-                <div className="mt-0.5 text-[10px] leading-snug text-luster-faint">
-                  {preset.hint}
-                </div>
-              </div>
-            </button>
-          );
-        })}
+        {PACT_PRESETS.map((preset) => (
+          <PactPresetCard
+            key={preset.rule}
+            preset={preset}
+            isSelected={matchingPreset?.rule === preset.rule}
+            onSelect={() => commit(preset.rule)}
+          />
+        ))}
       </div>
 
       <div className="space-y-1">
         <span className="luster-eyebrow">or write your own</span>
         <input
-          ref={inputRef}
           type="text"
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
           onBlur={() => commit(draft)}
           placeholder="e.g. one image per paragraph"
-          spellCheck={true}
-          style={{ ...INPUT_STYLE, padding: "8px 12px" }}
-          className="luster-glass-input block w-full text-[12.5px] font-medium"
+          className="luster-glass-input luster-text-input"
         />
       </div>
+    </EditorShell>
+  );
+}
 
-      <div className="flex justify-end">
-        <button
-          type="button"
-          onClick={async () => {
-            await commit(draft);
-            onClose();
-          }}
-          className="luster-btn-text"
+function PactPresetCard({
+  preset,
+  isSelected,
+  onSelect,
+}: {
+  preset: PactPreset;
+  isSelected: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      aria-pressed={isSelected}
+      className={cn(
+        "luster-press group flex items-start gap-2 rounded-md px-2 py-1.5 text-left transition-all",
+        isSelected
+          ? "bg-luster-accent/15 ring-1 ring-luster-accent/50"
+          : "bg-luster-subtle/60 ring-1 ring-luster-ink/5 hover:ring-luster-ink/15",
+      )}
+    >
+      <span
+        className={cn(
+          "mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md transition-colors",
+          isSelected
+            ? "bg-luster-accent/30 text-luster-ink"
+            : "bg-luster-ink/5 text-luster-muted group-hover:text-luster-ink",
+        )}
+      >
+        <preset.Icon size={11} strokeWidth={2.25} />
+      </span>
+      <div className="min-w-0 flex-1">
+        <div
+          className={cn(
+            "text-[11.5px] font-medium leading-tight transition-colors",
+            isSelected ? "text-luster-ink" : "text-luster-ink-soft",
+          )}
         >
-          Done
-        </button>
+          {preset.title}
+        </div>
+        <div className="mt-0.5 text-[10px] leading-snug text-luster-faint">
+          {preset.hint}
+        </div>
       </div>
-    </div>
+    </button>
   );
 }

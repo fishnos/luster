@@ -44,8 +44,6 @@ export function bootstrapAdapter(
 
   const dynamicModeSelector = createDynamicModeSelector({
     isEnabled: () => deps.controller.getState().docContext.autoMode,
-    isPactSet: () =>
-      deps.controller.getState().docContext.pact.trim().length > 0,
     getActiveMode: () => deps.controller.getState().activeMode,
     applySwitch: (mode, reason) => {
       deps.controller.setActiveModeFromAuto(mode, reason);

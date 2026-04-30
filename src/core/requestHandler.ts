@@ -4,6 +4,7 @@ import {
   ok,
   type LusterRequest,
   type LusterResponse,
+  type RunEchoRequest,
   type RunModeRequest,
   type RunModeResultData,
   type ValidateKeyResultData,
@@ -49,6 +50,11 @@ export function createRequestHandler(
               request.payload.mode,
               await runMode(services, request),
             ),
+          );
+
+        case "ai/run-echo":
+          return ok<RunModeResultData>(
+            engineResultToData("echo", await runEcho(services, request)),
           );
 
         case "key/validate": {
@@ -177,13 +183,6 @@ async function runMode(
     };
     return services.modeEngines.interrogation.run(input);
   }
-  if (payload.mode === "echo") {
-    const input: EchoEngineInput = {
-      fullText: payload.delta.fullText,
-      brief: docContext.brief,
-    };
-    return services.modeEngines.echo.run(input);
-  }
   const input: CriticEngineInput = {
     delta: payload.delta,
     contextBefore: payload.contextBefore,
@@ -214,6 +213,18 @@ function engineResultToData(
     retryAfterMs: result.retryAfterMs,
     error: result.error,
   };
+}
+
+async function runEcho(
+  services: BackgroundServices,
+  request: RunEchoRequest,
+): Promise<EchoEngineResult> {
+  const docContext = await services.docContextStore.get(request.payload.docId);
+  const input: EchoEngineInput = {
+    fullText: request.payload.fullText,
+    brief: docContext.brief,
+  };
+  return services.modeEngines.echo.run(input);
 }
 
 function tagOutput(mode: ModeName, output: unknown): ModeOutput {
