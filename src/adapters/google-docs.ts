@@ -259,9 +259,12 @@ export const googleDocsAdapter: Adapter = {
         unsubscribeStream();
         commitCallbacks.clear();
         textChangeCallbacks.clear();
+        caretChangeCallbacks.clear();
         textStream.reset();
         lastFullText = "";
         lastCaretRect = null;
+        bufferedText = null;
+        bufferedCaret = null;
       },
     };
 

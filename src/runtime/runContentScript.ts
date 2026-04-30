@@ -43,7 +43,7 @@ export async function runContentScript(
     const dispose = bootstrapAdapter({
       adapter,
       controller: overlayMount.controller,
-      setCaretPopup: overlayMount.setCaretPopup,
+      setCaretIssue: overlayMount.setCaretIssue,
     });
     if (!dispose) return false;
     overlayMount.controller.setEditorAttached(true);

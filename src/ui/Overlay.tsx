@@ -5,6 +5,7 @@ import { Button } from "@/ui/components/ui/button";
 import { Badge } from "@/ui/components/ui/badge";
 import { Icon } from "@/ui/components/Icon";
 import { Mark } from "@/ui/components/Mark";
+import { Odometer } from "@/ui/motion/Odometer";
 import { StatusDot } from "@/ui/components/StatusDot";
 import { ModeReading } from "@/ui/ModeReading";
 import { ModeInterrogation } from "@/ui/ModeInterrogation";
@@ -24,34 +25,55 @@ import type {
   OverlayController,
   OverlayState,
 } from "@/ui/state";
-import {
-  EASE_OUT,
-  PANEL_TRANSITION,
-  SECTION_TRANSITION,
-  TAB_TRANSITION,
-} from "@/ui/motion";
+import { EASE_OUT, SECTION_TRANSITION, TAB_TRANSITION } from "@/ui/motion";
 import { cn } from "@/ui/cn";
 
 export interface OverlayProps {
   controller: OverlayController;
 }
 
+const SHELL_EASE = "cubic-bezier(0.16, 1, 0.3, 1)";
+const SHELL_DURATION_MS = 460;
+const SHELL_TRANSITION_CSS = `width ${SHELL_DURATION_MS}ms ${SHELL_EASE}, height ${SHELL_DURATION_MS}ms ${SHELL_EASE}, border-radius ${SHELL_DURATION_MS}ms ${SHELL_EASE}`;
+
+const PILL_WIDTH = 140;
+const PILL_HEIGHT = 36;
+const PANEL_WIDTH = 360;
+const PANEL_HEIGHT = 560;
+
 export function Overlay({ controller }: OverlayProps) {
   const state = useOverlayState(controller);
   if (state.closed) return null;
 
+  const isMin = state.minimized;
+
   return (
-    <AnimatePresence mode="wait" initial={false}>
-      {state.minimized ? (
-        <MinimizedBadge key="minimized" controller={controller} state={state} />
+    <div
+      role={isMin ? undefined : "region"}
+      aria-label={isMin ? undefined : "Luster"}
+      style={{
+        position: "fixed",
+        left: state.position.x,
+        top: state.position.y,
+        width: isMin ? PILL_WIDTH : PANEL_WIDTH,
+        height: isMin ? PILL_HEIGHT : PANEL_HEIGHT,
+        borderRadius: isMin ? 999 : 14,
+        zIndex: 2147483647,
+        maxHeight: "85vh",
+        transition: SHELL_TRANSITION_CSS,
+      }}
+      className="luster-root luster-card text-luster-ink overflow-hidden flex flex-col"
+    >
+      {isMin ? (
+        <MinimizedInner controller={controller} state={state} />
       ) : (
-        <FullPanel key="panel" controller={controller} state={state} />
+        <PanelInner controller={controller} state={state} />
       )}
-    </AnimatePresence>
+    </div>
   );
 }
 
-function FullPanel({
+function PanelInner({
   controller,
   state,
 }: {
@@ -59,28 +81,21 @@ function FullPanel({
   state: OverlayState;
 }) {
   return (
-    <motion.div
-      role="region"
-      aria-label="Luster"
-      initial={{ opacity: 0, y: 6, scale: 0.985 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: 6, scale: 0.985 }}
-      transition={PANEL_TRANSITION}
-      style={{
-        position: "fixed",
-        left: state.position.x,
-        top: state.position.y,
-        width: 360,
-        maxHeight: "85vh",
-        zIndex: 2147483647,
-      }}
-      className="luster-root luster-card text-luster-ink overflow-hidden flex flex-col"
-    >
-      <div className="shrink-0">
+    <>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.22, delay: 0.18 }}
+        className="shrink-0"
+      >
         <Header controller={controller} state={state} />
-      </div>
-      <div
-        className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-3 py-3"
+        <div className="luster-rule mx-4" />
+      </motion.div>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.26, delay: 0.22 }}
+        className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-4 py-3"
         style={{ overscrollBehavior: "contain" }}
       >
         <AnimatePresence mode="wait" initial={false}>
@@ -114,8 +129,8 @@ function FullPanel({
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
-    </motion.div>
+      </motion.div>
+    </>
   );
 }
 
@@ -192,13 +207,16 @@ function Header({
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
-      className="flex h-12 cursor-grab items-center gap-2.5 px-4 active:cursor-grabbing"
+      className="relative flex h-12 cursor-grab items-center gap-2.5 px-4 active:cursor-grabbing"
     >
-      <Mark size={18} rounded={false} />
-      <div className="flex items-center gap-2">
-        <span className="luster-display text-[14px] leading-none">Luster</span>
-        <StatusDot status={state.modes[state.activeMode].status} />
-      </div>
+      <Mark size={22} rounded={false} spin />
+      <span className="luster-display translate-y-[1px] text-[18px] leading-none">
+        Luster
+      </span>
+      <StatusDot
+        status={state.modes[state.activeMode].status}
+        className="ml-1"
+      />
 
       <div className="ml-auto flex items-center gap-1">
         <Button
@@ -287,9 +305,21 @@ function MainView({
           role="tabpanel"
           id={`luster-panel-${state.activeMode}`}
           aria-label={`${state.activeMode} mode`}
-          initial={{ opacity: 0, y: 4 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -4 }}
+          initial={{
+            opacity: 0,
+            x: 8,
+            clipPath: "inset(0 100% 0 0)",
+          }}
+          animate={{
+            opacity: 1,
+            x: 0,
+            clipPath: "inset(0 0 0 0)",
+          }}
+          exit={{
+            opacity: 0,
+            x: -6,
+            clipPath: "inset(0 0 0 100%)",
+          }}
           transition={TAB_TRANSITION}
         >
           {state.activeMode === "reading" && (
@@ -428,7 +458,7 @@ function AutoSwitchToast({ status }: { status: AutoModeStatus }) {
   );
 }
 
-function MinimizedBadge({
+function MinimizedInner({
   controller,
   state,
 }: {
@@ -515,30 +545,22 @@ function MinimizedBadge({
         }
         controller.setMinimized(false);
       }}
-      initial={{ opacity: 0, scale: 0.85 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.85 }}
-      transition={{ duration: 0.18, ease: EASE_OUT }}
-      whileTap={{ scale: 0.95 }}
-      whileHover={{ scale: 1.02 }}
-      style={{
-        position: "fixed",
-        left: state.position.x,
-        top: state.position.y,
-        zIndex: 2147483647,
-      }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.18, delay: 0.18 }}
       className={cn(
-        "luster-root luster-card flex items-center gap-2 h-9 px-3 rounded-full cursor-grab active:cursor-grabbing",
+        "flex h-full w-full cursor-grab items-center justify-center gap-2 px-4 active:cursor-grabbing",
       )}
     >
-      <Mark size={18} />
-      <span className="luster-num text-[12px] font-medium text-luster-ink">
-        {wordCount.toLocaleString()}
-      </span>
+      <Mark size={16} />
+      <Odometer
+        value={wordCount}
+        className="luster-num text-[12px] font-medium leading-none text-luster-ink"
+      />
       {status !== "idle" && (
         <span
           className={cn(
-            "inline-block h-1.5 w-1.5 rounded-full",
+            "inline-block h-1.5 w-1.5 shrink-0 rounded-full",
             status === "pending" && "bg-luster-accent luster-pulse",
             status === "error" && "bg-luster-err",
             status === "rate-limited" && "bg-luster-warn",

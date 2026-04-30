@@ -30,7 +30,13 @@ export function StatusDot({ status, className }: StatusDotProps) {
       data-tone={STATUS_TONE[status]}
       className={cn("luster-status-pill", className)}
     >
-      <span className={cn("dot", status === "pending" && "luster-pulse")} />
+      <span
+        className={cn(
+          "dot",
+          status === "pending" && "luster-pulse",
+          status === "ok" && "luster-morse",
+        )}
+      />
       {STATUS_LABEL[status]}
     </span>
   );

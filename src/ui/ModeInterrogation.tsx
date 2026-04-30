@@ -1,15 +1,5 @@
-import type { InterrogationOutput } from "@/core/types";
 import { ModeStatusBanner } from "@/ui/ModeStatusBanner";
 import type { ModeOverlayInfo, OverlayController } from "@/ui/state";
-
-const KIND_LABEL: Record<
-  InterrogationOutput["questions"][number]["kind"],
-  string
-> = {
-  intent: "Intent",
-  craft: "Craft",
-  reader: "Reader",
-};
 
 export interface ModeInterrogationProps {
   controller: OverlayController;
@@ -38,9 +28,7 @@ export function ModeInterrogation({
           <ul className="luster-cross space-y-4">
             {info.output.result.questions.map((question, index) => (
               <li key={index} className="space-y-1.5">
-                <span className="luster-eyebrow">
-                  {KIND_LABEL[question.kind]}
-                </span>
+                <span className="luster-eyebrow">{question.kind}</span>
                 <p className="luster-serif text-[14px] leading-snug text-luster-ink">
                   {question.text}
                 </p>

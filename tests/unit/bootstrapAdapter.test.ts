@@ -33,6 +33,9 @@ function createFakeAdapter(): { adapter: Adapter; handle: FakeAdapterHandle } {
       callback("A sentence here. Another sentence.");
       return () => textListeners.delete(callback);
     },
+    onCaretChange(): UnsubscribeFn {
+      return () => {};
+    },
     caretRect: () => null,
     detach: () => {
       commitListeners.clear();

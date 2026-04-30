@@ -1,7 +1,7 @@
 import type { Adapter, AdapterHandle, CommitDelta } from "@/adapters/types";
 import type { OverlayController } from "@/ui/state";
 import type { RunModeResultData } from "@/core/messaging";
-import type { ModeName } from "@/core/types";
+import type { CriticIssue, ModeName } from "@/core/types";
 import type { QuestionKind } from "@/core/modes/prompts/interrogation";
 import { computeStats } from "@/core/stats";
 import { docIdFor } from "@/lib/docId";
@@ -17,10 +17,7 @@ const COMMIT_QUIET_MS = 1200;
 export interface BootstrapAdapterDeps {
   adapter: Adapter;
   controller: OverlayController;
-  setCaretPopup: (
-    rect: DOMRect | null,
-    data: import("@/core/types").CaretPopupData | null,
-  ) => void;
+  setCaretIssue: (rect: DOMRect | null, issue: CriticIssue | null) => void;
   hostDocument?: Document;
   hostWindow?: Window;
   runMode?: typeof sendRunMode;
@@ -81,22 +78,22 @@ export function bootstrapAdapter(
     dynamicModeSelector.recordTextChange(text);
   });
 
-  let lastCaretPopupData: import("@/core/types").CaretPopupData | null = null;
+  let lastCaretIssue: CriticIssue | null = null;
   let lastActiveMode = deps.controller.getState().activeMode;
   const unsubscribeMode = deps.controller.subscribe(() => {
     const next = deps.controller.getState().activeMode;
     if (next === lastActiveMode) return;
     lastActiveMode = next;
-    if (next === "reading") {
-      lastCaretPopupData = null;
-      deps.setCaretPopup(null, null);
+    if (next !== "critic" && lastCaretIssue) {
+      lastCaretIssue = null;
+      deps.setCaretIssue(null, null);
     }
   });
   const handleCaretChange = (rect: DOMRect | null) => {
     if (!rect) {
-      if (lastCaretPopupData) {
-        lastCaretPopupData = null;
-        deps.setCaretPopup(null, null);
+      if (lastCaretIssue) {
+        lastCaretIssue = null;
+        deps.setCaretIssue(null, null);
       }
       return;
     }
@@ -110,8 +107,8 @@ export function bootstrapAdapter(
       x: Math.max(padding, x),
       y: Math.max(padding, rect.top - 10),
     });
-    if (lastCaretPopupData) {
-      deps.setCaretPopup(rect, lastCaretPopupData);
+    if (lastCaretIssue) {
+      deps.setCaretIssue(rect, lastCaretIssue);
     }
   };
   const unsubscribeCaret =
@@ -200,52 +197,25 @@ export function bootstrapAdapter(
       } else {
         deps.controller.setModeError(mode, result.error ?? result.reason);
       }
-      lastCaretPopupData = null;
-      deps.setCaretPopup(null, null);
+      if (mode === "critic" && lastCaretIssue) {
+        lastCaretIssue = null;
+        deps.setCaretIssue(null, null);
+      }
       return;
     }
 
     deps.controller.setModeOutput(mode, result.output, result.provider);
 
-    if (mode === "reading") {
-      lastCaretPopupData = null;
-      deps.setCaretPopup(null, null);
-    }
-
     if (mode === "interrogation" && result.output.mode === "interrogation") {
       const lastQuestion = result.output.result.questions.at(-1);
       lastQuestionKind = lastQuestion?.kind ?? lastQuestionKind;
-
-      if (lastQuestion) {
-        const caretRect = handle.caretRect();
-        lastCaretPopupData = {
-          type: "interrogation",
-          label: "Reader",
-          text: lastQuestion.text,
-          kind: lastQuestion.kind,
-        };
-        deps.setCaretPopup(caretRect, lastCaretPopupData);
-      } else {
-        lastCaretPopupData = null;
-        deps.setCaretPopup(null, null);
-      }
     }
 
     if (mode === "critic" && result.output.mode === "critic") {
       const topIssue = result.output.result.issues[0] ?? null;
       const caretRect = handle.caretRect();
-      if (topIssue) {
-        lastCaretPopupData = {
-          type: "critic",
-          label: "Critique",
-          text: topIssue.suggestion || topIssue.label,
-          severity: topIssue.severity,
-        };
-        deps.setCaretPopup(caretRect, lastCaretPopupData);
-      } else {
-        lastCaretPopupData = null;
-        deps.setCaretPopup(null, null);
-      }
+      lastCaretIssue = topIssue;
+      deps.setCaretIssue(caretRect, topIssue);
     }
   }
 

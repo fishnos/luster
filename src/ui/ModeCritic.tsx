@@ -10,13 +10,6 @@ const SEVERITY_ORDER: CriticIssue["severity"][] = [
   "nit",
 ];
 
-const SEVERITY_LABEL: Record<CriticIssue["severity"], string> = {
-  structural: "Structural",
-  clarity: "Clarity",
-  rhythm: "Rhythm",
-  nit: "Nit",
-};
-
 const SEVERITY_TONE: Record<CriticIssue["severity"], string> = {
   structural: "text-luster-err",
   clarity: "text-luster-ink",
@@ -81,7 +74,7 @@ function CriticBody({
             <span
               className={cn("luster-eyebrow", SEVERITY_TONE[issue.severity])}
             >
-              {SEVERITY_LABEL[issue.severity]}
+              {issue.severity}
             </span>
             <span className="text-[13px] font-medium text-luster-ink">
               {issue.label}

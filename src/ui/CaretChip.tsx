@@ -1,14 +1,24 @@
 import { useEffect, useState } from "react";
-import type { CaretPopupData } from "@/core/types";
-import { Badge } from "@/ui/components/ui/badge";
+import type { CriticIssue } from "@/core/types";
 
-export interface CaretPopupProps {
+const SEVERITY_TONE: Record<CriticIssue["severity"], string> = {
+  structural: "text-luster-err",
+  clarity: "text-luster-ink",
+  rhythm: "text-luster-warn",
+  nit: "text-luster-faint",
+};
+
+export interface CaretIssueChipProps {
   caretRect: DOMRect | null;
-  data: CaretPopupData | null;
+  issue: CriticIssue | null;
   offsetY?: number;
 }
 
-export function CaretPopup({ caretRect, data, offsetY = 20 }: CaretPopupProps) {
+export function CaretIssueChip({
+  caretRect,
+  issue,
+  offsetY = 20,
+}: CaretIssueChipProps) {
   const [windowSize, setWindowSize] = useState(() => ({
     width: typeof window !== "undefined" ? window.innerWidth : 1280,
     height: typeof window !== "undefined" ? window.innerHeight : 720,
@@ -22,20 +32,11 @@ export function CaretPopup({ caretRect, data, offsetY = 20 }: CaretPopupProps) {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  if (!caretRect || !data) return null;
+  if (!caretRect || !issue) return null;
 
   const chipWidth = 300;
   const left = clamp(caretRect.left, 8, windowSize.width - chipWidth - 8);
   const top = clamp(caretRect.bottom + offsetY, 8, windowSize.height - 80);
-
-  const variant =
-    data.type === "critic"
-      ? data.severity === "structural" || data.severity === "clarity"
-        ? "destructive"
-        : data.severity === "nit"
-          ? "secondary"
-          : "default"
-      : "outline";
 
   return (
     <div
@@ -47,20 +48,21 @@ export function CaretPopup({ caretRect, data, offsetY = 20 }: CaretPopupProps) {
         width: chipWidth,
         zIndex: 2147483646,
       }}
-      className="luster-root luster-card luster-mount px-3 py-2.5 shadow-lg border border-luster-border/50"
+      className="luster-root luster-card luster-mount border border-luster-border/50 px-3 py-2.5 shadow-lg"
     >
-      <div className="flex items-center gap-2 mb-1.5">
-        <Badge
-          variant={variant as any}
-          className="h-4 px-1 text-[10px] font-semibold uppercase tracking-[0.16em]"
-        >
-          {data.label}
-        </Badge>
-        {data.kind && <span className="luster-eyebrow">{data.kind}</span>}
+      <div className="mb-1.5 flex items-center gap-2">
+        <span className={`luster-eyebrow ${SEVERITY_TONE[issue.severity]}`}>
+          {issue.severity}
+        </span>
+        <span className="text-[12px] font-medium text-luster-ink">
+          {issue.label}
+        </span>
       </div>
-      <div className="luster-serif text-[14px] leading-snug text-luster-ink">
-        {data.text}
-      </div>
+      {issue.suggestion && (
+        <div className="luster-display text-[14px] leading-snug text-luster-muted">
+          → {issue.suggestion}
+        </div>
+      )}
     </div>
   );
 }

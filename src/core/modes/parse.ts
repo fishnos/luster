@@ -17,7 +17,7 @@ export function extractJson(text: string): string {
   if (!trimmed) return "";
 
   const fenceMatch = trimmed.match(/```(?:json|JSON)?\s*([\s\S]*?)```/);
-  const content = fenceMatch ? fenceMatch[1].trim() : trimmed;
+  const content = fenceMatch ? (fenceMatch[1] ?? "").trim() : trimmed;
 
   if (!content) return "";
 
@@ -180,19 +180,24 @@ export function safeParse<TSchema extends ZodTypeAny>(
   if (!trimmed) return { ok: false, error: "empty AI response" };
 
   let candidate: any = null;
+  let parseSucceeded = false;
+  let lastSchemaError: string | null = null;
 
   const extracted = extractJson(text);
   if (extracted) {
     try {
       candidate = JSON.parse(extracted);
+      parseSucceeded = true;
     } catch (e) {
       try {
         candidate = JSON.parse(repairJson(extracted));
+        parseSucceeded = true;
       } catch (e2) {
         const truncated = repairTruncatedArrayObject(extracted);
         if (truncated) {
           try {
             candidate = JSON.parse(truncated);
+            parseSucceeded = true;
           } catch (e3) {
             // truncation repair failed
           }
@@ -204,26 +209,51 @@ export function safeParse<TSchema extends ZodTypeAny>(
   if (candidate) {
     const result = schema.safeParse(candidate);
     if (result.success) return { ok: true, data: result.data };
+    lastSchemaError = formatZodIssues(result.error);
   }
 
   if (!candidate) {
     candidate = parseFuzzyTags(text);
-  }
-  if (candidate) {
-    const result = schema.safeParse(candidate);
-    if (result.success) return { ok: true, data: result.data };
+    if (candidate) {
+      const result = schema.safeParse(candidate);
+      if (result.success) return { ok: true, data: result.data };
+      lastSchemaError = lastSchemaError ?? formatZodIssues(result.error);
+    }
   }
 
   const regexCandidate = attemptRegexExtraction(text, schema);
   if (regexCandidate) {
     const result = schema.safeParse(regexCandidate);
     if (result.success) return { ok: true, data: result.data };
+    lastSchemaError = lastSchemaError ?? formatZodIssues(result.error);
+  }
+
+  if (!parseSucceeded && !candidate && !regexCandidate) {
+    return {
+      ok: false,
+      error: `invalid JSON in response (Raw: ${trimmed.slice(-60)})`,
+    };
+  }
+
+  if (lastSchemaError) {
+    return {
+      ok: false,
+      error: `schema validation failed: ${lastSchemaError} (Raw: ${trimmed.slice(-60)})`,
+    };
   }
 
   return {
     ok: false,
     error: `could not parse response (Raw: ${trimmed.slice(-60)})`,
   };
+}
+
+function formatZodIssues(error: {
+  issues: { path: (string | number)[]; message: string }[];
+}): string {
+  return error.issues
+    .map((issue) => `${issue.path.join(".") || "root"}: ${issue.message}`)
+    .join("; ");
 }
 
 function parseFuzzyTags(text: string): any {
@@ -315,26 +345,33 @@ function parseFuzzyTags(text: string): any {
       (currentBlock && lower.includes("issue"))
     ) {
       if (currentBlock && currentArrayName) {
-        arrays[currentArrayName].push(currentBlock);
+        const bucket = arrays[currentArrayName];
+        if (bucket) bucket.push(currentBlock);
         currentBlock = null;
       }
     }
 
     // Handle notes (simple list items)
     if (line.startsWith("- ") || line.startsWith("* ")) {
-      arrays.notes.push(line.slice(2).trim());
+      const notes = arrays.notes;
+      if (notes) notes.push(line.slice(2).trim());
     }
   }
 
   // If a block was left open, close it
   if (currentBlock && currentArrayName) {
-    arrays[currentArrayName].push(currentBlock);
+    const bucket = arrays[currentArrayName];
+    if (bucket) bucket.push(currentBlock);
   }
 
   // Merge arrays into result
-  if (arrays.issues.length > 0) result.issues = arrays.issues;
-  if (arrays.questions.length > 0) result.questions = arrays.questions;
-  if (arrays.notes.length > 0) result.notes = arrays.notes;
+  const issuesArray = arrays.issues;
+  const questionsArray = arrays.questions;
+  const notesArray = arrays.notes;
+  if (issuesArray && issuesArray.length > 0) result.issues = issuesArray;
+  if (questionsArray && questionsArray.length > 0)
+    result.questions = questionsArray;
+  if (notesArray && notesArray.length > 0) result.notes = notesArray;
 
   return Object.keys(result).length > 0 ? result : null;
 }
@@ -352,6 +389,23 @@ function attemptRegexExtraction(text: string, schema: ZodTypeAny): any {
   let foundAny = false;
 
   for (const key in shape) {
+    const arrayRegex = new RegExp(`"${key}"\\s*[:=]\\s*\\[([^\\]]*)\\]`, "i");
+    const arrayMatch = text.match(arrayRegex);
+    if (arrayMatch) {
+      const items = (arrayMatch[1] ?? "")
+        .split(",")
+        .map((item) =>
+          item
+            .trim()
+            .replace(/^["']|["']$/g, "")
+            .trim(),
+        )
+        .filter((item) => item.length > 0);
+      result[key] = items;
+      foundAny = true;
+      continue;
+    }
+
     const stringRegex = new RegExp(`"${key}"\\s*[:=]\\s*["']([^"']*)["']`, "i");
     const stringMatch = text.match(stringRegex);
     if (stringMatch) {

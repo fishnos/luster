@@ -58,7 +58,7 @@ export function ConnectBanner({ onConnected }: ConnectBannerProps) {
   return (
     <div className="space-y-4 pb-2">
       <div className="space-y-1">
-        <div className="luster-eyebrow">Connect to start</div>
+        <div className="luster-eyebrow">Connect to AI to start</div>
         <p className="text-[12px] leading-snug text-luster-muted">
           Your key stays on this device.
         </p>

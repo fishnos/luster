@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="96" height="96" role="img" aria-label="Luster">
+  <defs>
+    <radialGradient id="spark" cx="0.5" cy="0.5" r="0.55">
+      <stop offset="0%" stop-color="#fff7e6" stop-opacity="1"/>
+      <stop offset="45%" stop-color="#f5d9a8" stop-opacity="1"/>
+      <stop offset="100%" stop-color="#d99a6c" stop-opacity="1"/>
+    </radialGradient>
+  </defs>
+  <rect width="96" height="96" rx="22" fill="#0c0a0a"/>
+  <path
+    transform="translate(0 0) scale(4)"
+    d="M12 1.6 C12.7 7.6 16.4 11.3 22.4 12 C16.4 12.7 12.7 16.4 12 22.4 C11.3 16.4 7.6 12.7 1.6 12 C7.6 11.3 11.3 7.6 12 1.6 Z"
+    fill="url(#spark)"
+  />
+</svg>

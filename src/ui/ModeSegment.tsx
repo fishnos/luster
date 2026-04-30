@@ -1,20 +1,17 @@
-import { Eye, HelpCircle, Repeat, Target } from "lucide-react";
-import type { ComponentType } from "react";
 import type { ModeName } from "@/core/types";
 import type { ModeOverlayInfo } from "@/ui/state";
-import { cn } from "@/ui/cn";
 
 interface TabSpec {
   mode: ModeName;
   label: string;
-  Icon: ComponentType<{ size?: number; className?: string }>;
+  numeral: string;
 }
 
 const TABS: TabSpec[] = [
-  { mode: "reading", label: "Reading", Icon: Eye },
-  { mode: "interrogation", label: "Interrogation", Icon: HelpCircle },
-  { mode: "critic", label: "Critic", Icon: Target },
-  { mode: "echo", label: "Echo", Icon: Repeat },
+  { mode: "reading", label: "reading", numeral: "i" },
+  { mode: "interrogation", label: "interrogation", numeral: "ii" },
+  { mode: "critic", label: "critic", numeral: "iii" },
+  { mode: "echo", label: "echo", numeral: "iv" },
 ];
 
 export interface ModeSegmentProps {
@@ -25,8 +22,12 @@ export interface ModeSegmentProps {
 
 export function ModeSegment({ active, onSelect }: ModeSegmentProps) {
   return (
-    <div role="tablist" aria-label="Mode" className="flex items-center gap-1">
-      {TABS.map(({ mode, label, Icon }) => {
+    <div
+      role="tablist"
+      aria-label="Mode"
+      className="flex items-center justify-between"
+    >
+      {TABS.map(({ mode, label, numeral }) => {
         const isActive = active === mode;
         return (
           <button
@@ -35,23 +36,14 @@ export function ModeSegment({ active, onSelect }: ModeSegmentProps) {
             role="tab"
             aria-selected={isActive}
             aria-controls={`luster-panel-${mode}`}
+            data-active={isActive}
             onClick={() => onSelect(mode)}
-            className={cn(
-              "luster-press relative flex h-8 items-center gap-1.5 px-2 text-[12px] font-medium transition-colors",
-              isActive
-                ? "text-luster-ink"
-                : "text-luster-faint hover:text-luster-muted",
-            )}
+            className="luster-mode-tab luster-press flex flex-1 flex-col items-center gap-0.5"
           >
-            <Icon size={13} className="opacity-90" />
-            {label}
-            <span
-              aria-hidden
-              className={cn(
-                "absolute inset-x-2 -bottom-0.5 h-px transition-colors",
-                isActive ? "bg-luster-ink" : "bg-transparent",
-              )}
-            />
+            <span className="text-[8px] tracking-[0.34em] opacity-60">
+              {numeral}
+            </span>
+            <span>{label}</span>
           </button>
         );
       })}

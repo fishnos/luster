@@ -1,6 +1,10 @@
+<p align="left">
+  <img src="./assets/luster-mark.svg" alt="Luster" width="72" height="72" />
+</p>
+
 # Luster
 
-A browser extension that interrogates your prose as you write.
+_An editorial console for your draft._ A browser extension that interrogates your prose as you write — voice, rhythm, structure, repetition — without ever leaving the page.
 
 Three modes:
 

@@ -58,6 +58,9 @@ function installCanvasBridge(): void {
   let trackedCanvases: HTMLCanvasElement[] = [];
   const seenCanvases = new Set<HTMLCanvasElement>();
   const fillTextHitsByCanvas = new WeakMap<HTMLCanvasElement, number>();
+  const docGlyphKeysByCanvas = new WeakMap<HTMLCanvasElement, Set<string>>();
+  const docGlyphTimestamps = new Map<string, number>();
+  const GLYPH_STALENESS_MS = 2200;
   let pendingReconstruct: number | null = null;
   let generation = 0;
   let currentBridgeState: BridgeState = "searching";
@@ -183,6 +186,36 @@ function installCanvasBridge(): void {
             scheduleReconstruct();
           }
         }
+        const canvasKeys = docGlyphKeysByCanvas.get(canvas);
+        if (canvasKeys && canvasKeys.size > 0) {
+          const canvasRect = canvas.getBoundingClientRect();
+          const scrollOffset = getScrollOffset();
+          const absMinX = minX + canvasRect.left;
+          const absMaxX = maxX + canvasRect.left;
+          const absMinY = minY + canvasRect.top + scrollOffset;
+          const absMaxY = maxY + canvasRect.top + scrollOffset;
+          let removedAny = false;
+          for (const key of [...canvasKeys]) {
+            const docGlyph = docGlyphs.get(key);
+            if (!docGlyph) {
+              canvasKeys.delete(key);
+              docGlyphTimestamps.delete(key);
+              continue;
+            }
+            const inside =
+              docGlyph.x >= absMinX - 0.5 &&
+              docGlyph.x <= absMaxX + 0.5 &&
+              docGlyph.y >= absMinY - docGlyph.fontSize &&
+              docGlyph.y <= absMaxY + 0.5;
+            if (inside) {
+              docGlyphs.delete(key);
+              docGlyphTimestamps.delete(key);
+              canvasKeys.delete(key);
+              removedAny = true;
+            }
+          }
+          if (removedAny) scheduleReconstruct();
+        }
       }
     } catch (error) {
       logOnce("clearRect hook", error);
@@ -263,8 +296,10 @@ function installCanvasBridge(): void {
     const rect = canvas.getBoundingClientRect();
     const absX = transformedX + rect.left;
     const absY = transformedY + rect.top + getScrollOffset();
-    const lineBucket = Math.round(absY / Math.max(finalFontSize, 6));
-    const xBucket = Math.round(absX);
+    const cellHeight = Math.max(finalFontSize, 6);
+    const cellWidth = Math.max(finalFontSize * 0.45, 4);
+    const lineBucket = Math.round(absY / cellHeight);
+    const xBucket = Math.round(absX / cellWidth);
     const key = `${xBucket}|${lineBucket}`;
     docGlyphs.set(key, {
       text,
@@ -272,6 +307,13 @@ function installCanvasBridge(): void {
       y: absY,
       fontSize: finalFontSize,
     });
+    docGlyphTimestamps.set(key, performance.now());
+    let canvasKeys = docGlyphKeysByCanvas.get(canvas);
+    if (!canvasKeys) {
+      canvasKeys = new Set();
+      docGlyphKeysByCanvas.set(canvas, canvasKeys);
+    }
+    canvasKeys.add(key);
 
     scheduleReconstruct();
   }
@@ -336,6 +378,7 @@ function installCanvasBridge(): void {
       trackedCanvases = trackedCanvases.filter(
         (canvas) => canvas.isConnected && isEditorCanvas(canvas),
       );
+      evictStaleViewportGlyphs();
       if (docGlyphs.size > DOC_GLYPHS_MAX) {
         const excess = docGlyphs.size - DOC_GLYPHS_MAX;
         const iterator = docGlyphs.keys();
@@ -343,6 +386,7 @@ function installCanvasBridge(): void {
           const next = iterator.next();
           if (next.done) break;
           docGlyphs.delete(next.value);
+          docGlyphTimestamps.delete(next.value);
         }
       }
       const reconstruction = reconstructDocument(
@@ -390,6 +434,41 @@ function installCanvasBridge(): void {
       emitBest(reconstruction.paragraphs, docGlyphs.size);
     } catch (error) {
       logOnce("reconstruct", error);
+    }
+  }
+
+  function computeViewportBoundsAbsolute(): {
+    top: number;
+    bottom: number;
+  } | null {
+    const editor = document.querySelector<HTMLElement>(".kix-appview-editor");
+    if (!editor) return null;
+    const rect = editor.getBoundingClientRect();
+    const scrollOffset = getScrollOffset();
+    return {
+      top: rect.top + scrollOffset,
+      bottom: rect.bottom + scrollOffset,
+    };
+  }
+
+  function evictStaleViewportGlyphs(): void {
+    if (docGlyphTimestamps.size === 0) return;
+    const viewport = computeViewportBoundsAbsolute();
+    if (!viewport) return;
+    const padding = 200;
+    const top = viewport.top - padding;
+    const bottom = viewport.bottom + padding;
+    const now = performance.now();
+    for (const [key, timestamp] of docGlyphTimestamps) {
+      if (now - timestamp <= GLYPH_STALENESS_MS) continue;
+      const glyph = docGlyphs.get(key);
+      if (!glyph) {
+        docGlyphTimestamps.delete(key);
+        continue;
+      }
+      if (glyph.y < top || glyph.y > bottom) continue;
+      docGlyphs.delete(key);
+      docGlyphTimestamps.delete(key);
     }
   }
 

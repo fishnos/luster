@@ -28,6 +28,8 @@ export function createDomAdapterHandle(
   const textStream: TextStream = createTextStream();
   const commitCallbacks = new Set<(delta: CommitDelta) => void>();
   const textChangeCallbacks = new Set<(text: string) => void>();
+  const caretChangeCallbacks = new Set<(rect: DOMRect | null) => void>();
+  let lastCaretRect: DOMRect | null = null;
   const unsubscribeFromStream = textStream.onCommit((delta) => {
     for (const callback of commitCallbacks) callback(delta);
   });
@@ -62,13 +64,23 @@ export function createDomAdapterHandle(
       callback(config.readText());
       return () => textChangeCallbacks.delete(callback);
     },
-    caretRect: () => config.caretRect(),
+    onCaretChange(callback): UnsubscribeFn {
+      caretChangeCallbacks.add(callback);
+      if (lastCaretRect) callback(lastCaretRect);
+      return () => caretChangeCallbacks.delete(callback);
+    },
+    caretRect: () => {
+      const rect = config.caretRect();
+      lastCaretRect = rect;
+      return rect;
+    },
     detach() {
       observer.disconnect();
       pushUpdate.cancel();
       unsubscribeFromStream();
       commitCallbacks.clear();
       textChangeCallbacks.clear();
+      caretChangeCallbacks.clear();
       textStream.reset();
     },
   };
