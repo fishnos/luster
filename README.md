@@ -1,62 +1,68 @@
-<p align="left">
-  <img src="./assets/luster-mark.svg" alt="Luster" width="72" height="72" />
+<p align="center">
+  <img src="./public/icons/Lux-Softworks-Tinted.png" alt="Lux Softworks" width="96" />
 </p>
 
-# Luster
+<h1 align="center">Luster</h1>
 
-_An editorial console for your draft._ A browser extension that interrogates your prose as you write — voice, rhythm, structure, repetition — without ever leaving the page.
+<p align="center">
+  An editorial console for your draft. Reads your prose as you write — voice, rhythm, structure — without leaving the page.
+</p>
 
-Three modes:
+<p align="center">
+  <img alt="version" src="https://img.shields.io/badge/version-1.1.0-1f1f1f?style=flat-square">
+  <img alt="MV3 / MV2" src="https://img.shields.io/badge/Chrome%20MV3%20%7C%20Firefox%20MV2-1f1f1f?style=flat-square">
+  <img alt="BYOK" src="https://img.shields.io/badge/BYOK-Anthropic%20%7C%20OpenAI%20%7C%20Gemini-1f1f1f?style=flat-square">
+  <img alt="local-only" src="https://img.shields.io/badge/local%20only-no%20telemetry-1f1f1f?style=flat-square">
+</p>
 
-- **Reading** — editorial read-back: voice, rhythm, paragraph purpose, transitions.
-- **Interrogation** — craft and intent questions, no critique.
-- **Critic** — live structure and clarity issues with span-level highlights.
+---
 
-BYOK: your Anthropic, OpenAI, or Gemini key stays in `chrome.storage.local`. No backend, no telemetry. See [PRIVACY.md](./PRIVACY.md).
+## What it does
 
-## Stack
+Four lenses on the same draft:
 
-WXT · React 19 · TypeScript · Tailwind. Targets Chrome (MV3) and Firefox (MV2).
+- **Reading** — editorial read-back of voice, rhythm, transitions.
+- **Interrogation** — craft and intent questions. No critique.
+- **Critic** — structural and clarity issues, called out live.
+- **Echo** — phrases and images you keep returning to.
 
-## Scope
+Where it works: Google Docs, Notion, Substack, Medium, Ghost.
 
-Activates on document editors only:
+## How it stays out of the way
 
-- Google Docs (`docs.google.com/document/*`)
-- Notion (`*.notion.so`, `*.notion.site`)
-- Substack / Medium / Ghost (ProseMirror-family)
+Bring your own key (Anthropic, OpenAI, or Gemini). The key sits in `chrome.storage.local`. No backend. No telemetry. Read [PRIVACY.md](./PRIVACY.md).
 
-## Run locally
+## Run it
 
 ```bash
 npm install
-npm run dev          # Chrome, watch
-npm run dev:firefox  # Firefox, watch
+npm run dev            # Chrome
+npm run dev:firefox    # Firefox
 ```
 
-WXT auto-launches a browser with the extension loaded. To load manually:
+WXT opens a browser with the extension loaded. To load it by hand:
 
-- Chrome — `chrome://extensions` → Developer mode → Load unpacked → `.output/chrome-mv3`
-- Firefox — `about:debugging` → Load Temporary Add-on → `.output/firefox-mv2/manifest.json`
+- **Chrome** — `chrome://extensions` → Developer mode → Load unpacked → `.output/chrome-mv3`
+- **Firefox** — `about:debugging` → Load Temporary Add-on → `.output/firefox-mv2/manifest.json`
 
 ## Build
 
 ```bash
-npm run build              # Chrome production
-npm run build:firefox      # Firefox production
-npm run zip                # Chrome Web Store zip
-npm run zip:firefox        # AMO xpi
+npm run build           # Chrome
+npm run build:firefox   # Firefox
+npm run zip             # Web Store zip
+npm run zip:firefox     # AMO xpi
 ```
 
 Artifacts land in `.output/`.
 
-## Test
+## Check it
 
 ```bash
-npm run compile  # tsc --noEmit
-npm run test     # vitest
+npm run compile   # tsc --noEmit
+npm run test      # vitest
 ```
 
-## First-run check
+---
 
-After loading the extension, open the popup → connect a provider → paste a key → save. Open a Google Doc / Notion page / Substack draft; the overlay should mount. On any unsupported page (e.g. `example.com`) it must not run.
+<sub>Built with WXT · React 19 · TypeScript · Tailwind. A Lux Softworks project.</sub>
