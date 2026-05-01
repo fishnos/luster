@@ -25,6 +25,7 @@ const keyVault = createKeyVault(createBrowserLocalStorage());
 type Status =
   | { tone: "idle" }
   | { tone: "pending" }
+  | { tone: "saved"; message: string }
   | { tone: "error"; message: string };
 
 export interface WelcomeSetupProps {
@@ -54,8 +55,13 @@ export function WelcomeSetup({ onComplete }: WelcomeSetupProps) {
     await keyVault.setApiKey(provider, trimmed);
     await keyVault.setActiveProvider(provider);
     setApiKey("");
-    setStatus({ tone: "idle" });
-    onComplete(provider);
+    setStatus({
+      tone: "saved",
+      message: result.modelEcho
+        ? `Connected · reached ${result.modelEcho}.`
+        : "Connected.",
+    });
+    window.setTimeout(() => onComplete(provider), 700);
   }
 
   return (
@@ -109,6 +115,9 @@ export function WelcomeSetup({ onComplete }: WelcomeSetupProps) {
           autoFocus
           className="luster-mono luster-glass-input luster-input-md"
         />
+        {status.tone === "saved" && (
+          <span className="text-[11.5px] text-luster-ok">{status.message}</span>
+        )}
         {status.tone === "error" && (
           <span className="text-[11.5px] text-luster-err">
             {status.message}
@@ -120,14 +129,18 @@ export function WelcomeSetup({ onComplete }: WelcomeSetupProps) {
         variants={blurFadeIn}
         type="button"
         onClick={connect}
-        disabled={status.tone === "pending"}
+        disabled={status.tone === "pending" || status.tone === "saved"}
         className={cn(
           "luster-press inline-flex items-center gap-1.5 self-start text-[14px] font-semibold text-luster-ink",
           "border-b border-luster-ink pb-0.5",
           "disabled:opacity-60 disabled:cursor-not-allowed",
         )}
       >
-        {status.tone === "pending" ? "Validating…" : "Continue"}
+        {status.tone === "pending"
+          ? "Validating…"
+          : status.tone === "saved"
+            ? "Connected"
+            : "Continue"}
         <span aria-hidden>→</span>
       </motion.button>
 

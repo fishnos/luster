@@ -581,29 +581,34 @@
   cursor: not-allowed;
 }
 
-.luster-status-thinking::after {
-  content: "";
+.luster-thinking-dots {
   display: inline-block;
-  width: 1ch;
-  text-align: left;
-  animation: luster-thinking-dots 1.4s steps(4, end) infinite;
+  margin-left: 1px;
+  letter-spacing: 0.02em;
 }
 
-@keyframes luster-thinking-dots {
-  0% {
-    content: "";
-  }
-  25% {
-    content: ".";
-  }
-  50% {
-    content: "..";
-  }
-  75% {
-    content: "...";
-  }
+.luster-thinking-dots > span {
+  display: inline-block;
+  opacity: 0;
+  animation: luster-dot-blink 1.2s infinite;
+}
+
+.luster-thinking-dots > span:nth-child(2) {
+  animation-delay: 0.18s;
+}
+
+.luster-thinking-dots > span:nth-child(3) {
+  animation-delay: 0.36s;
+}
+
+@keyframes luster-dot-blink {
+  0%,
+  60%,
   100% {
-    content: "";
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
   }
 }
 
@@ -670,7 +675,7 @@
 @media (prefers-reduced-motion: reduce) {
   .luster-mount,
   .luster-cross,
-  .luster-status-thinking::after,
+  .luster-thinking-dots > span,
   .luster-thinking-bar,
   .luster-rule-draw::after,
   .luster-mark-glyph .spark,

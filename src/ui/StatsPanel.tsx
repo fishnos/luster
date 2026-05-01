@@ -9,7 +9,6 @@ export function StatsPanel({ stats }: StatsPanelProps) {
   if (stats === null || stats.words === 0) {
     return (
       <div className="flex items-center gap-3" aria-label="0 words in document">
-        <span className="luster-breath-line text-luster-faint" aria-hidden />
         <p className="luster-display-italic text-[13px] leading-none text-luster-faint">
           waiting for the first word
         </p>
@@ -19,7 +18,7 @@ export function StatsPanel({ stats }: StatsPanelProps) {
 
   return (
     <div
-      className="flex items-end justify-between gap-4"
+      className="flex items-start justify-between gap-4"
       aria-label={`${stats.words} words in document`}
     >
       <Cell label="words" value={stats.words} accent="ivory" emphasis />

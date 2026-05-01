@@ -171,6 +171,20 @@ export function createRequestHandler(
           return ok<GoogleAuthRedirectData>(info);
         }
 
+        case "gauth/forget": {
+          await services.googleAuth.forgetToken("");
+          return ok();
+        }
+
+        case "gdocs/cookie-export": {
+          const { docId } = request.payload;
+          if (!docId) {
+            return ok({ ok: false, error: "missing docId" });
+          }
+          const result = await cookieExportFetch(docId);
+          return ok(result);
+        }
+
         case "gauth/status": {
           const result = await services.googleAuth.getToken(false);
           if (result.ok) {
@@ -227,6 +241,126 @@ export function createRequestHandler(
       return fail(error instanceof Error ? error.message : String(error));
     }
   };
+}
+
+interface CookieApi {
+  getAll: (details: {
+    url?: string;
+    domain?: string;
+  }) => Promise<{ name: string; value: string }[]>;
+}
+
+function getCookieApi(): CookieApi | null {
+  const scope = globalThis as unknown as {
+    browser?: { cookies?: CookieApi };
+    chrome?: { cookies?: CookieApi };
+  };
+  return scope.browser?.cookies ?? scope.chrome?.cookies ?? null;
+}
+
+async function readGoogleDocsCookieHeader(): Promise<string | null> {
+  const cookies = getCookieApi();
+  if (!cookies) {
+    console.warn(
+      "[Luster bg] cookies API unavailable — `cookies` permission missing?",
+    );
+    return null;
+  }
+  try {
+    const items = await cookies.getAll({ url: "https://docs.google.com/" });
+    if (!items || items.length === 0) {
+      console.warn(
+        "[Luster bg] no docs.google.com cookies in store. Are you signed into Google in this browser profile?",
+      );
+      return null;
+    }
+    return items.map((entry) => `${entry.name}=${entry.value}`).join("; ");
+  } catch (error) {
+    console.warn("[Luster bg] cookies.getAll failed:", error);
+    return null;
+  }
+}
+
+async function cookieExportFetch(
+  docId: string,
+): Promise<
+  | { ok: true; fullText: string }
+  | { ok: false; status?: number; error?: string }
+> {
+  const url = `https://docs.google.com/document/d/${encodeURIComponent(
+    docId,
+  )}/export?format=txt`;
+
+  const cookieHeader = await readGoogleDocsCookieHeader();
+  const headers: Record<string, string> = { Accept: "text/plain" };
+  if (cookieHeader) headers["Cookie"] = cookieHeader;
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: "GET",
+      credentials: "include",
+      redirect: "follow",
+      headers,
+    });
+  } catch (error) {
+    console.warn("[Luster bg] cookie-export fetch threw:", error);
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+
+  let text = "";
+  try {
+    text = await response.text();
+  } catch (error) {
+    console.warn("[Luster bg] cookie-export read body threw:", error);
+    return {
+      ok: false,
+      status: response.status,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+
+  const finalUrl = response.url;
+  const contentType = response.headers.get("content-type") ?? "";
+  const looksLikeLogin =
+    /accounts\.google\.com|ServiceLogin/i.test(finalUrl) ||
+    (contentType.includes("text/html") &&
+      /sign in|signin|accounts\.google/i.test(text.slice(0, 500)));
+
+  console.info("[Luster bg] cookie-export response", {
+    status: response.status,
+    finalUrl: finalUrl.slice(0, 120),
+    contentType,
+    textLength: text.length,
+    firstChars: text.slice(0, 120),
+    cookieHeaderPresent: cookieHeader !== null,
+  });
+
+  if (!response.ok) {
+    return {
+      ok: false,
+      status: response.status,
+      error: text.slice(0, 200),
+    };
+  }
+  if (looksLikeLogin) {
+    return {
+      ok: false,
+      status: response.status,
+      error: "redirected to login",
+    };
+  }
+  if (contentType && !contentType.includes("text/plain")) {
+    return {
+      ok: false,
+      status: response.status,
+      error: `unexpected content-type: ${contentType}`,
+    };
+  }
+  return { ok: true, fullText: text };
 }
 
 async function runMode(

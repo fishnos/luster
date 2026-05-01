@@ -57,6 +57,7 @@ export function createAnthropicClient(
           "content-type": "application/json",
           "x-api-key": args.apiKey,
           "anthropic-version": API_VERSION,
+          "anthropic-dangerous-direct-browser-access": "true",
         },
         body: JSON.stringify(body),
       });
@@ -89,6 +90,7 @@ export function createAnthropicClient(
             "content-type": "application/json",
             "x-api-key": apiKey,
             "anthropic-version": API_VERSION,
+            "anthropic-dangerous-direct-browser-access": "true",
           },
           body: JSON.stringify({
             model,

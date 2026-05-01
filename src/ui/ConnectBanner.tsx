@@ -22,6 +22,7 @@ const keyVault = createKeyVault(createBrowserLocalStorage());
 type Status =
   | { tone: "idle" }
   | { tone: "pending" }
+  | { tone: "saved"; message: string }
   | { tone: "error"; message: string };
 
 export interface ConnectBannerProps {
@@ -51,8 +52,13 @@ export function ConnectBanner({ onConnected }: ConnectBannerProps) {
     await keyVault.setApiKey(provider, trimmed);
     await keyVault.setActiveProvider(provider);
     setApiKey("");
-    setStatus({ tone: "idle" });
-    onConnected(provider);
+    setStatus({
+      tone: "saved",
+      message: result.modelEcho
+        ? `Connected · reached ${result.modelEcho}.`
+        : "Connected.",
+    });
+    window.setTimeout(() => onConnected(provider), 700);
   }
 
   return (
@@ -89,10 +95,14 @@ export function ConnectBanner({ onConnected }: ConnectBannerProps) {
         <button
           type="button"
           onClick={connect}
-          disabled={status.tone === "pending"}
+          disabled={status.tone === "pending" || status.tone === "saved"}
           className="luster-btn-primary"
         >
-          {status.tone === "pending" ? "…" : "Connect"}
+          {status.tone === "pending"
+            ? "…"
+            : status.tone === "saved"
+              ? "✓"
+              : "Connect"}
         </button>
       </div>
 
@@ -105,6 +115,16 @@ export function ConnectBanner({ onConnected }: ConnectBannerProps) {
         >
           Get a key →
         </a>
+        {status.tone === "pending" && (
+          <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-luster-muted">
+            Validating…
+          </span>
+        )}
+        {status.tone === "saved" && (
+          <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-luster-ok">
+            {status.message}
+          </span>
+        )}
         {status.tone === "error" && (
           <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-luster-err">
             {status.message}

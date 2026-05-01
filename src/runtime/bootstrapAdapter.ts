@@ -61,9 +61,11 @@ export function bootstrapAdapter(
     lastObservedActiveMode = next;
   });
 
+  let unsubscribeStorageSync: () => void = () => {};
   if (!deps.runMode) {
     void hydrateSettings(deps.controller);
     void hydrateDocContext(deps.controller, docId);
+    unsubscribeStorageSync = subscribeSettingsSync(deps.controller);
   }
 
   const unsubscribeAuth =
@@ -78,6 +80,10 @@ export function bootstrapAdapter(
 
   if (typeof handle.requestAuth === "function") {
     deps.controller.setAdapterAuthRequester(handle.requestAuth);
+  }
+
+  if (typeof handle.pushManualText === "function") {
+    deps.controller.setManualTextPusher(handle.pushManualText);
   }
 
   const unsubscribeText = handle.onTextChange((text) => {
@@ -247,7 +253,9 @@ export function bootstrapAdapter(
       unsubscribeMode();
       unsubscribeManualOverride();
       unsubscribeAuth();
+      unsubscribeStorageSync();
       deps.controller.setAdapterAuthRequester(null);
+      deps.controller.setManualTextPusher(null);
       dynamicModeSelector.detach();
       handle.detach();
     },
@@ -277,6 +285,57 @@ async function hydrateDocContext(
     // ignore
   }
 }
+
+const SETTINGS_STORAGE_KEY_PREFIXES = [
+  "luster.key.",
+  "luster.activeProvider",
+  "luster.defaultMode",
+  "luster.autoLaunch",
+];
+
+function subscribeSettingsSync(controller: OverlayController): () => void {
+  const browserApi = globalThis as unknown as {
+    browser?: {
+      storage?: {
+        onChanged?: {
+          addListener: (cb: StorageChangeCallback) => void;
+          removeListener: (cb: StorageChangeCallback) => void;
+        };
+      };
+    };
+    chrome?: {
+      storage?: {
+        onChanged?: {
+          addListener: (cb: StorageChangeCallback) => void;
+          removeListener: (cb: StorageChangeCallback) => void;
+        };
+      };
+    };
+  };
+  const onChanged =
+    browserApi.browser?.storage?.onChanged ??
+    browserApi.chrome?.storage?.onChanged;
+  if (!onChanged) return () => {};
+
+  const listener: StorageChangeCallback = (changes, areaName) => {
+    if (areaName !== "local") return;
+    const touchedKeys = Object.keys(changes);
+    const matches = touchedKeys.some((changedKey) =>
+      SETTINGS_STORAGE_KEY_PREFIXES.some((prefix) =>
+        changedKey.startsWith(prefix),
+      ),
+    );
+    if (!matches) return;
+    void hydrateSettings(controller);
+  };
+  onChanged.addListener(listener);
+  return () => onChanged.removeListener(listener);
+}
+
+type StorageChangeCallback = (
+  changes: Record<string, unknown>,
+  areaName: string,
+) => void;
 
 async function hydrateSettings(controller: OverlayController): Promise<void> {
   try {

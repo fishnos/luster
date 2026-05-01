@@ -142,6 +142,26 @@ export async function sendGoogleAuthStatus(): Promise<GoogleAuthStatusData> {
   return response.data as GoogleAuthStatusData;
 }
 
+export async function sendGoogleAuthForget(): Promise<void> {
+  await sendRequest({ type: "gauth/forget", payload: {} });
+}
+
+export async function sendGoogleDocsCookieExport(
+  docId: string,
+): Promise<
+  | { ok: true; fullText: string }
+  | { ok: false; status?: number; error?: string }
+> {
+  const response = await sendRequest({
+    type: "gdocs/cookie-export",
+    payload: { docId },
+  });
+  if (!response.ok) return { ok: false, error: response.error };
+  return response.data as
+    | { ok: true; fullText: string }
+    | { ok: false; status?: number; error?: string };
+}
+
 export async function sendGoogleAuthRedirect(): Promise<GoogleAuthRedirectData> {
   const response = await sendRequest({
     type: "gauth/redirect-url",

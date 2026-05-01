@@ -2,7 +2,7 @@
   "name": "luster",
   "description": "Browser extension that interrogates your prose as you write.",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "module",
   "scripts": {
     "dev": "wxt",

@@ -86,6 +86,7 @@ export function InlineSettings({
   const [autoLaunch, setAutoLaunchState] = useState(true);
   const [historyEnabled, setHistoryEnabled] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [googleDocsEnabled, setGoogleDocsEnabledState] = useState(true);
 
   useEffect(() => {
     void hydrate();
@@ -106,6 +107,7 @@ export function InlineSettings({
       setDefaultModeState(await keyVault.getDefaultMode());
       setAutoLaunchState(await keyVault.getAutoLaunch());
       setHistoryEnabled(await historyStore.isEnabled());
+      setGoogleDocsEnabledState(await keyVault.getGoogleDocsEnabled());
     }
   }, []);
 
@@ -166,6 +168,14 @@ export function InlineSettings({
     setAutoLaunchState(value);
     await keyVault.setAutoLaunch(value);
     onAutoLaunchChange(value);
+  }
+
+  async function changeGoogleDocsEnabled(value: boolean): Promise<void> {
+    setGoogleDocsEnabledState(value);
+    await keyVault.setGoogleDocsEnabled(value);
+    if (window.location.host === "docs.google.com") {
+      window.location.reload();
+    }
   }
 
   async function commitModel(): Promise<void> {
@@ -319,6 +329,15 @@ export function InlineSettings({
           onChange={changeAutoLaunch}
           label="Open Luster automatically"
           description="Google Docs, Notion, Substack, Medium, Ghost."
+        />
+      </Section>
+
+      <Section label="Google Docs">
+        <Toggle
+          checked={googleDocsEnabled}
+          onChange={changeGoogleDocsEnabled}
+          label="Read Google Docs"
+          description="Lets Luster see your draft on docs.google.com. Toggling here reloads the tab automatically."
         />
       </Section>
 

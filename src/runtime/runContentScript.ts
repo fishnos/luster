@@ -13,15 +13,28 @@ const HOST_KIND: Record<AdapterId, HostKind> = {
   prosemirror: "prosemirror",
 };
 
+export interface RunContentScriptOptions {
+  attachAdapter?: boolean;
+}
+
 export async function runContentScript(
   ctx: ContentScriptContext,
   adapter: Adapter,
+  options: RunContentScriptOptions = {},
 ): Promise<void> {
   const url = new URL(window.location.href);
   if (!adapter.matchUrl(url)) return;
 
   const overlayMount = await mountOverlay(ctx);
   overlayMount.controller.setHostKind(HOST_KIND[adapter.id]);
+
+  if (options.attachAdapter === false) {
+    overlayMount.controller.setHostDisabledKind(HOST_KIND[adapter.id]);
+    ctx.onInvalidated(() => {
+      overlayMount.destroy();
+    });
+    return;
+  }
 
   let detachAdapter: (() => void) | null = null;
 

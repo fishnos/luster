@@ -170,6 +170,20 @@ export interface GoogleAuthRedirectRequest {
   payload: Record<string, never>;
 }
 
+export interface GoogleAuthForgetRequest {
+  type: "gauth/forget";
+  payload: Record<string, never>;
+}
+
+export interface GoogleDocsCookieExportRequest {
+  type: "gdocs/cookie-export";
+  payload: { docId: string };
+}
+
+export type GoogleDocsCookieExportData =
+  | { ok: true; fullText: string }
+  | { ok: false; status?: number; error?: string };
+
 export interface GoogleAuthRedirectData {
   redirectUrl: string | null;
   clientId: string | null;
@@ -197,6 +211,7 @@ export type GoogleDocsFetchData =
         | "permission-denied"
         | "not-found"
         | "rate-limited"
+        | "office-file"
         | "error"
         | "not-configured";
       status?: number;
@@ -226,7 +241,9 @@ export type LusterRequest =
   | GoogleAuthConnectRequest
   | GoogleAuthStatusRequest
   | GoogleDocsFetchRequest
-  | GoogleAuthRedirectRequest;
+  | GoogleAuthRedirectRequest
+  | GoogleAuthForgetRequest
+  | GoogleDocsCookieExportRequest;
 
 export interface OkResponse<TData = undefined> {
   ok: true;

@@ -46,6 +46,7 @@ export interface OverlayState {
   autoLaunch: boolean;
   editorAttached: boolean;
   editorSearchStuck: boolean;
+  hostDisabledKind: HostKind | null;
   hostKind: HostKind;
   isPinned: boolean;
   closed: boolean;
@@ -80,6 +81,7 @@ export function createInitialOverlayState(): OverlayState {
     autoLaunch: true,
     editorAttached: false,
     editorSearchStuck: false,
+    hostDisabledKind: null,
     hostKind: "unknown",
     isPinned: false,
     closed: false,
@@ -119,6 +121,7 @@ export interface OverlayController {
   setEditorAttached: (value: boolean) => void;
   setEditorSearchStuck: (value: boolean) => void;
   setHostKind: (value: HostKind) => void;
+  setHostDisabledKind: (value: HostKind | null) => void;
   setPinned: (value: boolean) => void;
   setClosed: (value: boolean) => void;
   setDocId: (docId: string | null) => void;
@@ -133,6 +136,8 @@ export interface OverlayController {
     requester: ((interactive: boolean) => Promise<AdapterAuthState>) | null,
   ) => void;
   requestAdapterAuth: (interactive: boolean) => Promise<AdapterAuthState>;
+  setManualTextPusher: (pusher: ((text: string) => void) | null) => void;
+  pushManualText: (text: string) => boolean;
   resetMode: (mode: ModeName) => void;
   reset: () => void;
 }
@@ -143,6 +148,7 @@ export function createOverlayController(): OverlayController {
   let authRequester:
     | ((interactive: boolean) => Promise<AdapterAuthState>)
     | null = null;
+  let manualTextPusher: ((text: string) => void) | null = null;
 
   function notify(): void {
     for (const listener of listeners) listener();
@@ -296,6 +302,14 @@ export function createOverlayController(): OverlayController {
       );
     },
 
+    setHostDisabledKind(value) {
+      update((current) =>
+        current.hostDisabledKind === value
+          ? current
+          : { ...current, hostDisabledKind: value },
+      );
+    },
+
     setPinned(value) {
       update((current) =>
         current.isPinned === value ? current : { ...current, isPinned: value },
@@ -371,6 +385,16 @@ export function createOverlayController(): OverlayController {
         return state.adapterAuth;
       }
       return authRequester(interactive);
+    },
+
+    setManualTextPusher(pusher) {
+      manualTextPusher = pusher;
+    },
+
+    pushManualText(text) {
+      if (!manualTextPusher) return false;
+      manualTextPusher(text);
+      return true;
     },
 
     resetMode(mode) {

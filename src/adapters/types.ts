@@ -23,7 +23,19 @@ export type AdapterAuthState =
       reason: "no-token" | "denied" | "error";
       error?: string;
     }
-  | { kind: "not-configured"; error?: string };
+  | { kind: "not-configured"; error?: string }
+  | {
+      kind: "doc-error";
+      reason:
+        | "permission-denied"
+        | "not-found"
+        | "rate-limited"
+        | "office-file"
+        | "screen-reader-off"
+        | "error";
+      status?: number;
+      error?: string;
+    };
 
 export interface AdapterHandle {
   readText: () => string;
@@ -36,6 +48,7 @@ export interface AdapterHandle {
     callback: (state: AdapterAuthState) => void,
   ) => UnsubscribeFn;
   requestAuth?: (interactive: boolean) => Promise<AdapterAuthState>;
+  pushManualText?: (text: string) => void;
   annotate?: (
     range: AnnotationRange,
     kind: AnnotationKind,

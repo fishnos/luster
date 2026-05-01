@@ -9,6 +9,15 @@ const MODEL_PREFIX = "luster.model.";
 const ACTIVE_PROVIDER_KEY = "luster.activeProvider";
 const DEFAULT_MODE_KEY = "luster.defaultMode";
 const AUTO_LAUNCH_KEY = "luster.autoLaunch";
+const GOOGLE_DOCS_ENABLED_KEY = "luster.googleDocsEnabled";
+const GOOGLE_DOCS_MODE_KEY = "luster.googleDocsMode";
+
+export type GoogleDocsMode = "bridge" | "api";
+
+export const STORAGE_KEYS = {
+  googleDocsEnabled: GOOGLE_DOCS_ENABLED_KEY,
+  googleDocsMode: GOOGLE_DOCS_MODE_KEY,
+} as const;
 
 export const DEFAULT_MODELS: Record<ProviderId, string> = {
   anthropic: "claude-sonnet-4-6",
@@ -33,6 +42,10 @@ export interface KeyVault {
   setDefaultMode: (mode: ModeName) => Promise<void>;
   getAutoLaunch: () => Promise<boolean>;
   setAutoLaunch: (enabled: boolean) => Promise<void>;
+  getGoogleDocsEnabled: () => Promise<boolean>;
+  setGoogleDocsEnabled: (enabled: boolean) => Promise<void>;
+  getGoogleDocsMode: () => Promise<GoogleDocsMode>;
+  setGoogleDocsMode: (mode: GoogleDocsMode) => Promise<void>;
 }
 
 export function createKeyVault(storage: StorageBackend): KeyVault {
@@ -123,6 +136,30 @@ export function createKeyVault(storage: StorageBackend): KeyVault {
 
     async setAutoLaunch(enabled) {
       await storage.setMany({ [AUTO_LAUNCH_KEY]: enabled === true });
+    },
+
+    async getGoogleDocsEnabled() {
+      const result = await storage.getMany([GOOGLE_DOCS_ENABLED_KEY]);
+      const value = result[GOOGLE_DOCS_ENABLED_KEY];
+      return value !== false;
+    },
+
+    async setGoogleDocsEnabled(enabled) {
+      await storage.setMany({
+        [GOOGLE_DOCS_ENABLED_KEY]: enabled === true,
+      });
+    },
+
+    async getGoogleDocsMode() {
+      const result = await storage.getMany([GOOGLE_DOCS_MODE_KEY]);
+      const value = result[GOOGLE_DOCS_MODE_KEY];
+      return value === "api" ? "api" : "bridge";
+    },
+
+    async setGoogleDocsMode(mode) {
+      await storage.setMany({
+        [GOOGLE_DOCS_MODE_KEY]: mode === "api" ? "api" : "bridge",
+      });
     },
   };
 }

@@ -30,11 +30,17 @@ export function StatusDot({ status, className }: StatusDotProps) {
       className={cn(
         "luster-eyebrow leading-none",
         STATUS_TONE[status],
-        status === "pending" && "luster-status-thinking",
         className,
       )}
     >
       {STATUS_LABEL[status]}
+      {status === "pending" && (
+        <span aria-hidden className="luster-thinking-dots">
+          <span>.</span>
+          <span>.</span>
+          <span>.</span>
+        </span>
+      )}
     </span>
   );
 }

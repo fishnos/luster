@@ -7,6 +7,7 @@ export type GoogleDocsFetchResult =
         | "permission-denied"
         | "not-found"
         | "rate-limited"
+        | "office-file"
         | "error";
       status?: number;
       error?: string;
@@ -86,6 +87,14 @@ export async function fetchGoogleDoc(
   }
   if (!response.ok) {
     const errorText = await response.text().catch(() => "");
+    if (response.status === 400 && isOfficeFileError(errorText)) {
+      return {
+        ok: false,
+        reason: "office-file",
+        status: 400,
+        error: extractApiMessage(errorText) ?? errorText.slice(0, 200),
+      };
+    }
     return {
       ok: false,
       reason: "error",
@@ -151,4 +160,22 @@ function renderParagraph(elements: DocsParagraphElement[]): string {
 export function extractDocId(href: string): string | null {
   const match = href.match(/\/document\/d\/([a-zA-Z0-9_-]+)/);
   return match ? (match[1] ?? null) : null;
+}
+
+function isOfficeFileError(body: string): boolean {
+  if (!body) return false;
+  if (/FAILED_PRECONDITION/.test(body) && /Office file/i.test(body))
+    return true;
+  return /must not be an Office file/i.test(body);
+}
+
+function extractApiMessage(body: string): string | null {
+  if (!body) return null;
+  try {
+    const parsed = JSON.parse(body) as { error?: { message?: string } };
+    if (typeof parsed.error?.message === "string") return parsed.error.message;
+  } catch {
+    return null;
+  }
+  return null;
 }

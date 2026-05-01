@@ -135,13 +135,13 @@ describe("notionAdapter.attach", () => {
   });
 });
 
-describe("googleDocsAdapter.attach (OAuth API client)", () => {
-  it("starts with empty text and exposes an auth state hook", () => {
+describe("googleDocsAdapter.attach (canvas bridge)", () => {
+  it("starts with empty text and provides text/commit/caret hooks", () => {
     const handle = googleDocsAdapter.attach(document);
     expect(handle.readText()).toBe("");
     expect(handle.caretRect()).toBeNull();
-    expect(typeof handle.authState).toBe("function");
-    expect(typeof handle.requestAuth).toBe("function");
+    expect(typeof handle.onTextChange).toBe("function");
+    expect(typeof handle.onCommit).toBe("function");
     handle.detach();
   });
 });

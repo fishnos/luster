@@ -131,6 +131,7 @@ function buildAuthUrl(clientId: string, redirectUri: string): string {
   url.searchParams.set("redirect_uri", redirectUri);
   url.searchParams.set("scope", SCOPES);
   url.searchParams.set("include_granted_scopes", "true");
+  url.searchParams.set("prompt", "select_account");
   return url.toString();
 }
 

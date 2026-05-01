@@ -37,9 +37,15 @@ export default defineConfig({
       name: "Luster",
       description:
         "Interrogates your prose as you write — reading, interrogation, and critic modes.",
-      version: "1.0.0",
+      version: "1.1.0",
       ...(isChrome ? { key: chromeManifestKey } : {}),
-      permissions: ["storage", "activeTab", "identity"],
+      permissions: [
+        "storage",
+        "activeTab",
+        "identity",
+        "cookies",
+        "declarativeNetRequest",
+      ],
       host_permissions: [
         "https://docs.google.com/*",
         "https://www.notion.so/*",
@@ -48,6 +54,10 @@ export default defineConfig({
         "https://medium.com/*",
         "https://*.medium.com/*",
         "https://*.ghost.io/*",
+        "https://generativelanguage.googleapis.com/*",
+        "https://api.anthropic.com/*",
+        "https://api.openai.com/*",
+        "https://accounts.google.com/*",
       ],
       icons: {
         16: "icon/16.png",

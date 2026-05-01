@@ -12,7 +12,12 @@ import { ModeInterrogation } from "@/ui/ModeInterrogation";
 import { ModeCritic } from "@/ui/ModeCritic";
 import { ModeEcho } from "@/ui/ModeEcho";
 import { ModeSegment } from "@/ui/ModeSegment";
-import { sendGoogleAuthRedirect, sendRunEchoScan } from "@/core/sendRequest";
+import {
+  sendGoogleAuthConnect,
+  sendGoogleAuthForget,
+  sendGoogleAuthRedirect,
+  sendRunEchoScan,
+} from "@/core/sendRequest";
 import { StatsPanel } from "@/ui/StatsPanel";
 import { DocContextRow } from "@/ui/DocContextRow";
 import { ConnectBanner } from "@/ui/ConnectBanner";
@@ -22,11 +27,16 @@ import { useOverlayState } from "@/ui/useOverlayState";
 import type {
   AutoModeReason,
   AutoModeStatus,
+  HostKind,
   OverlayController,
   OverlayState,
 } from "@/ui/state";
 import { EASE_OUT, SECTION_TRANSITION, TAB_TRANSITION } from "@/ui/motion";
 import { cn } from "@/ui/cn";
+import { createKeyVault } from "@/core/keyVault";
+import { createBrowserLocalStorage } from "@/core/storageBackend";
+
+const overlayKeyVault = createKeyVault(createBrowserLocalStorage());
 
 export interface OverlayProps {
   controller: OverlayController;
@@ -210,7 +220,7 @@ function Header({
       className="relative flex h-12 cursor-grab items-center gap-3 px-4 active:cursor-grabbing"
     >
       <Mark size={20} spin />
-      <div className="flex items-baseline gap-2.5">
+      <div className="flex items-center gap-2.5">
         <span className="luster-display text-[19px] leading-none">luster</span>
         <StatusDot status={state.modes[state.activeMode]?.status ?? "idle"} />
       </div>
@@ -298,6 +308,23 @@ function MainView({
             style={{ overflow: "hidden" }}
           >
             <GoogleAuthNotConfigured error={state.adapterAuth.error} />
+          </motion.div>
+        )}
+        {state.adapterAuth.kind === "doc-error" && (
+          <motion.div
+            key="gauth-doc-error"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={SECTION_TRANSITION}
+            style={{ overflow: "hidden" }}
+          >
+            <GoogleDocFetchError
+              controller={controller}
+              reason={state.adapterAuth.reason}
+              status={state.adapterAuth.status}
+              error={state.adapterAuth.error}
+            />
           </motion.div>
         )}
       </AnimatePresence>
@@ -407,34 +434,39 @@ function MainView({
       </AnimatePresence>
 
       <AnimatePresence initial={false}>
-        {!state.editorAttached && state.connectState !== "missing" && (
+        {state.hostDisabledKind !== null && (
           <motion.div
-            key={state.editorSearchStuck ? "stuck" : "searching"}
+            key="host-disabled"
             initial={{ opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.18, ease: EASE_OUT }}
           >
-            {state.editorSearchStuck ? (
-              <EditorHint hostKind={state.hostKind} />
-            ) : (
-              <div className="flex items-center gap-2 text-[11px] text-luster-faint">
-                <span className="relative inline-block h-1 w-12 overflow-hidden rounded bg-luster-subtle">
-                  <motion.span
-                    className="absolute inset-y-0 w-1/3 rounded bg-luster-accent/60"
-                    animate={{ x: ["-50%", "200%"] }}
-                    transition={{
-                      duration: 1.4,
-                      ease: "linear",
-                      repeat: Infinity,
-                    }}
-                  />
-                </span>
-                Looking for the editor on this page…
-              </div>
-            )}
+            <HostDisabledBanner hostKind={state.hostDisabledKind} />
           </motion.div>
         )}
+        {state.hostDisabledKind === null &&
+          !state.editorAttached &&
+          state.connectState !== "missing" && (
+            <motion.div
+              key={state.editorSearchStuck ? "stuck" : "searching"}
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.18, ease: EASE_OUT }}
+            >
+              {state.editorSearchStuck ? (
+                <EditorHint hostKind={state.hostKind} />
+              ) : (
+                <div className="flex items-center gap-2 text-[12px] text-luster-muted">
+                  <span className="relative h-px w-16 overflow-hidden">
+                    <span className="absolute inset-0 luster-thinking-bar" />
+                  </span>
+                  <span>Looking for the editor</span>
+                </div>
+              )}
+            </motion.div>
+          )}
       </AnimatePresence>
       {!state.editorAttached && state.connectState === "connected" && (
         <p className="text-[11px] text-luster-faint italic">
@@ -592,6 +624,80 @@ function MinimizedInner({
   );
 }
 
+function HostDisabledBanner({ hostKind }: { hostKind: HostKind }) {
+  const [pending, setPending] = useState<"none" | "enable" | "signin">("none");
+  const [error, setError] = useState<string | null>(null);
+  const label =
+    hostKind === "google-docs"
+      ? "Google Docs"
+      : hostKind === "notion"
+        ? "Notion"
+        : hostKind === "prosemirror"
+          ? "this editor"
+          : "this site";
+
+  async function enableReading(): Promise<void> {
+    setError(null);
+    setPending("enable");
+    await overlayKeyVault.setGoogleDocsMode("bridge");
+    await overlayKeyVault.setGoogleDocsEnabled(true);
+    window.location.reload();
+  }
+
+  async function signInWithGoogle(): Promise<void> {
+    setError(null);
+    setPending("signin");
+    const result = await sendGoogleAuthConnect(true);
+    if (!result.connected) {
+      setPending("none");
+      setError(
+        result.error ??
+          (result.reason === "not-configured"
+            ? "Google sign-in isn't configured for this build."
+            : "Sign-in didn't complete."),
+      );
+      return;
+    }
+    await overlayKeyVault.setGoogleDocsMode("api");
+    await overlayKeyVault.setGoogleDocsEnabled(true);
+    window.location.reload();
+  }
+
+  return (
+    <div className="space-y-2 rounded-md border border-luster-border-strong/50 bg-luster-subtle/40 p-3">
+      <div className="luster-eyebrow">Reading is off for {label}</div>
+      <p className="text-[12px] leading-snug text-luster-muted">
+        Luster is mounted but won't see your draft on this page until you turn
+        reading back on. Either let Luster read the page directly, or sign into
+        Google for the API path.
+      </p>
+      {error && (
+        <p className="text-[11px] leading-snug text-luster-err">{error}</p>
+      )}
+      <div className="flex flex-wrap items-center gap-3 pt-1">
+        <button
+          type="button"
+          disabled={pending !== "none"}
+          onClick={() => void enableReading()}
+          className="luster-btn-primary"
+        >
+          {pending === "enable" ? "Enabling…" : "Enable reading"}
+        </button>
+        {hostKind === "google-docs" && (
+          <button
+            type="button"
+            disabled={pending !== "none"}
+            onClick={() => void signInWithGoogle()}
+            className="luster-btn-text"
+          >
+            {pending === "signin" ? "Signing in…" : "Sign in with Google"}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function GoogleAuthBanner({
   controller,
   state,
@@ -623,6 +729,11 @@ function GoogleAuthBanner({
         editorial feedback in sync. Read-only — your text never leaves your
         device.
       </p>
+      <p className="text-[11px] leading-snug text-luster-faint">
+        If your account can't sign in (school / Workspace), turn on Tools →
+        Accessibility → Screen reader support and Luster will read the page
+        directly without OAuth.
+      </p>
       {isDenied && (
         <p className="text-[11px] leading-snug text-luster-warn">
           Authorization was declined. Click connect to try again.
@@ -641,6 +752,81 @@ function GoogleAuthBanner({
         >
           {pending ? "Connecting…" : "Connect"}
         </button>
+      </div>
+    </div>
+  );
+}
+
+function GoogleDocFetchError({
+  controller,
+  reason,
+  status,
+  error,
+}: {
+  controller: OverlayController;
+  reason:
+    | "permission-denied"
+    | "not-found"
+    | "rate-limited"
+    | "office-file"
+    | "screen-reader-off"
+    | "error";
+  status?: number;
+  error?: string;
+}) {
+  const [pending, setPending] = useState(false);
+  const isOfficeFile = reason === "office-file";
+  const isScreenReaderOff = reason === "screen-reader-off";
+  const hideReconnect = isOfficeFile || isScreenReaderOff;
+  const headline =
+    reason === "permission-denied"
+      ? "This Google account can't open the doc"
+      : reason === "not-found"
+        ? "Doc not found for this account"
+        : reason === "rate-limited"
+          ? "Google Docs rate limit hit"
+          : reason === "office-file"
+            ? "This is a Word file, not a Google Doc"
+            : reason === "screen-reader-off"
+              ? "Turn on screen reader support to use Luster here"
+              : "Couldn't reach this doc";
+  const body =
+    reason === "permission-denied" || reason === "not-found"
+      ? "The Google account you authorized doesn't have read access to this document. Reconnect with the account that owns or was shared this doc."
+      : reason === "rate-limited"
+        ? "Google paused requests for a moment. Luster will retry."
+        : reason === "office-file"
+          ? "Luster can't read Office files via Google's API. Open File → Save as Google Docs, OR enable Tools → Accessibility → Turn on screen reader support and Luster will read this page directly."
+          : reason === "screen-reader-off"
+            ? "Open Tools → Accessibility, turn on Screen reader support. Luster will pick up the doc text within a few seconds — no Google sign-in needed. (Your work setting may block third-party sign-ins; this path skips that entirely.)"
+            : "Google's API returned an error. Reconnecting may help.";
+  return (
+    <div className="space-y-2 rounded-md border border-luster-border-strong/50 bg-luster-subtle/40 p-3">
+      <div className="luster-eyebrow text-luster-warn">{headline}</div>
+      <p className="text-[12px] leading-snug text-luster-muted">{body}</p>
+      {!hideReconnect && (error || status) && (
+        <p className="luster-mono text-[10px] leading-snug text-luster-faint">
+          {status ? `HTTP ${status}` : ""}
+          {status && error ? " · " : ""}
+          {error ?? ""}
+        </p>
+      )}
+      <div className="flex items-center gap-3 pt-1">
+        {!hideReconnect && (
+          <button
+            type="button"
+            disabled={pending}
+            onClick={async () => {
+              setPending(true);
+              await sendGoogleAuthForget();
+              await controller.requestAdapterAuth(true);
+              setPending(false);
+            }}
+            className="luster-btn-primary"
+          >
+            {pending ? "Reconnecting…" : "Reconnect Google"}
+          </button>
+        )}
       </div>
     </div>
   );
