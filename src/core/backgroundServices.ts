@@ -11,6 +11,7 @@ import { createAnthropicClient } from "@/core/providers/anthropic";
 import { createOpenAIClient } from "@/core/providers/openai";
 import { createGeminiClient } from "@/core/providers/gemini";
 import { createModeEngines, type ModeEngines } from "@/core/modes";
+import { createGoogleAuth, type GoogleAuth } from "@/core/googleAuth";
 
 export interface BackgroundServices {
   aiClient: AiClient;
@@ -19,6 +20,7 @@ export interface BackgroundServices {
   historyStore: HistoryStore;
   docContextStore: DocContextStore;
   modeEngines: ModeEngines;
+  googleAuth: GoogleAuth;
 }
 
 export interface BackgroundServicesOptions {
@@ -48,6 +50,7 @@ export function createBackgroundServices(
     },
   });
   const modeEngines = createModeEngines({ aiClient });
+  const googleAuth = createGoogleAuth({ storage });
 
   return {
     aiClient,
@@ -56,5 +59,6 @@ export function createBackgroundServices(
     historyStore,
     docContextStore,
     modeEngines,
+    googleAuth,
   };
 }

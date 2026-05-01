@@ -150,7 +150,7 @@ function repairJson(json: string): string {
       else continue;
     } else if (char === "]") {
       if (stack[stack.length - 1] === "[") stack.pop();
-      else continue; // drop stray ]
+      else continue;
     }
     clean += char;
   }
@@ -158,7 +158,6 @@ function repairJson(json: string): string {
   repaired = clean;
 
   if (inString) {
-    // Try to close the string. If it ends with a stray backslash, drop it.
     if (repaired.endsWith("\\")) repaired = repaired.slice(0, -1);
     repaired += '"';
   }
@@ -199,7 +198,6 @@ export function safeParse<TSchema extends ZodTypeAny>(
             candidate = JSON.parse(truncated);
             parseSucceeded = true;
           } catch (e3) {
-            // truncation repair failed
           }
         }
       }
@@ -275,7 +273,6 @@ function parseFuzzyTags(text: string): any {
   for (const line of lines) {
     const lower = line.toLowerCase();
 
-    // Detect array/block starts
     if (
       lower.includes("issue") &&
       !lower.includes(":") &&
@@ -295,7 +292,6 @@ function parseFuzzyTags(text: string): any {
       continue;
     }
 
-    // Detect field values
     const colonIndex = line.indexOf(":");
     if (colonIndex !== -1) {
       let key = line
@@ -309,7 +305,6 @@ function parseFuzzyTags(text: string): any {
         .replace(/^["']|["']$/g, "");
 
       if (currentBlock) {
-        // Special case: spans (e.g., "Span: 10, 20" or "Start: 10")
         if (key === "span") {
           const nums = value.match(/\d+/g);
           if (nums) {
@@ -328,7 +323,6 @@ function parseFuzzyTags(text: string): any {
           currentBlock[key] = value;
         }
       } else {
-        // Root fields
         if (key === "voicetrend") result.voiceTrend = value;
         else if (key === "paragraphpurpose") result.paragraphPurpose = value;
         else if (key === "transitionstrength")
@@ -338,7 +332,6 @@ function parseFuzzyTags(text: string): any {
       continue;
     }
 
-    // Handle end of blocks
     if (
       lower.includes("/issue") ||
       lower.includes("end_issue") ||
@@ -351,20 +344,17 @@ function parseFuzzyTags(text: string): any {
       }
     }
 
-    // Handle notes (simple list items)
     if (line.startsWith("- ") || line.startsWith("* ")) {
       const notes = arrays.notes;
       if (notes) notes.push(line.slice(2).trim());
     }
   }
 
-  // If a block was left open, close it
   if (currentBlock && currentArrayName) {
     const bucket = arrays[currentArrayName];
     if (bucket) bucket.push(currentBlock);
   }
 
-  // Merge arrays into result
   const issuesArray = arrays.issues;
   const questionsArray = arrays.questions;
   const notesArray = arrays.notes;

@@ -15,12 +15,27 @@ export interface AnnotationRange {
 
 export type AnnotationKind = "critic-issue";
 
+export type AdapterAuthState =
+  | { kind: "ok" }
+  | { kind: "not-required" }
+  | {
+      kind: "needs-auth";
+      reason: "no-token" | "denied" | "error";
+      error?: string;
+    }
+  | { kind: "not-configured"; error?: string };
+
 export interface AdapterHandle {
   readText: () => string;
   onCommit: (callback: (delta: CommitDelta) => void) => UnsubscribeFn;
   onTextChange: (callback: (text: string) => void) => UnsubscribeFn;
   onCaretChange: (callback: (rect: DOMRect | null) => void) => UnsubscribeFn;
   caretRect: () => DOMRect | null;
+  authState?: () => AdapterAuthState;
+  onAuthStateChange?: (
+    callback: (state: AdapterAuthState) => void,
+  ) => UnsubscribeFn;
+  requestAuth?: (interactive: boolean) => Promise<AdapterAuthState>;
   annotate?: (
     range: AnnotationRange,
     kind: AnnotationKind,

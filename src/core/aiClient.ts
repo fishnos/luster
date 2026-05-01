@@ -7,6 +7,10 @@ import type {
   ProviderClient,
   ValidateKeyResult,
 } from "@/core/providers/types";
+import {
+  ProviderAuthError,
+  ProviderRateLimitError,
+} from "@/core/providers/types";
 
 export interface AiCallRequest {
   mode: ModeName;
@@ -100,6 +104,23 @@ export function createAiClient(deps: AiClientDeps): AiClient {
           tokens: result.tokens,
         };
       } catch (error) {
+        if (error instanceof ProviderRateLimitError) {
+          return {
+            ok: false,
+            reason: "rate-limited",
+            provider,
+            retryAfterMs: error.retryAfterMs,
+            error: error.message,
+          };
+        }
+        if (error instanceof ProviderAuthError) {
+          return {
+            ok: false,
+            reason: "no-key",
+            provider,
+            error: error.message,
+          };
+        }
         return {
           ok: false,
           reason: "provider-error",

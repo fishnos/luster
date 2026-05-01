@@ -3,7 +3,6 @@ import { cn } from "@/ui/cn";
 export interface MarkProps {
   size?: number;
   className?: string;
-  rounded?: boolean;
   static?: boolean;
   spin?: boolean;
 }

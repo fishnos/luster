@@ -171,24 +171,17 @@ function ContextPill({
         isFilled ? `${label} set, click to edit` : `Add ${label.toLowerCase()}`
       }
       className={cn(
-        "luster-press inline-grid h-7 grid-cols-[14px_auto_6px] items-center gap-x-2 rounded-full px-2.5 transition-all",
+        "luster-press inline-flex h-7 items-center gap-2 rounded-full px-3 transition-all",
         isActive
-          ? "bg-luster-accent/15 text-luster-ink ring-1 ring-luster-accent/50"
+          ? "bg-luster-ink/12 text-luster-ink ring-1 ring-luster-ink/40"
           : isFilled
-            ? "bg-luster-subtle text-luster-ink ring-1 ring-luster-ink/10 hover:ring-luster-ink/25"
+            ? "bg-luster-subtle text-luster-ink ring-1 ring-luster-ember/40 hover:ring-luster-ember/60"
             : "border border-dashed border-luster-ink/20 text-luster-faint hover:border-luster-ink/35 hover:text-luster-muted",
       )}
     >
-      <span className="grid h-3.5 w-3.5 place-items-center">
-        <ActiveIcon size={12} strokeWidth={2.25} className="opacity-90" />
-      </span>
-      <span className="text-[11.5px] font-semibold leading-none tracking-tight">
+      <ActiveIcon size={12} strokeWidth={2} className="opacity-90" />
+      <span className="text-[11.5px] font-medium leading-none tracking-tight">
         {label}
-      </span>
-      <span className="grid h-1.5 w-1.5 place-items-center">
-        {isFilled && !isActive && (
-          <span className="block h-1.5 w-1.5 rounded-full bg-luster-accent" />
-        )}
       </span>
     </button>
   );

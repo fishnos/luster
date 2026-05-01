@@ -66,6 +66,20 @@ export function bootstrapAdapter(
     void hydrateDocContext(deps.controller, docId);
   }
 
+  const unsubscribeAuth =
+    typeof handle.onAuthStateChange === "function"
+      ? handle.onAuthStateChange((authState) => {
+          deps.controller.setAdapterAuth(authState);
+        })
+      : (() => {
+          deps.controller.setAdapterAuth({ kind: "not-required" });
+          return () => {};
+        })();
+
+  if (typeof handle.requestAuth === "function") {
+    deps.controller.setAdapterAuthRequester(handle.requestAuth);
+  }
+
   const unsubscribeText = handle.onTextChange((text) => {
     const stats = computeStats(text);
     if ((window as unknown as { __lusterDebug?: boolean }).__lusterDebug) {
@@ -232,6 +246,8 @@ export function bootstrapAdapter(
       unsubscribeCommit();
       unsubscribeMode();
       unsubscribeManualOverride();
+      unsubscribeAuth();
+      deps.controller.setAdapterAuthRequester(null);
       dynamicModeSelector.detach();
       handle.detach();
     },

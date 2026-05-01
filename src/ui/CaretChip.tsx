@@ -60,7 +60,7 @@ export function CaretIssueChip({
       </div>
       {issue.suggestion && (
         <div className="luster-display text-[14px] leading-snug text-luster-muted">
-          → {issue.suggestion}
+          {issue.suggestion}
         </div>
       )}
     </div>

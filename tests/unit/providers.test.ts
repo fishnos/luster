@@ -75,7 +75,7 @@ describe("createAnthropicClient", () => {
         systemPrompt: "s",
         userPrompt: "u",
       }),
-    ).rejects.toThrow(/anthropic 401/);
+    ).rejects.toThrow(/Claude rejected the API key/i);
   });
 
   it("validateKey returns ok with model echo on success", async () => {
@@ -102,7 +102,7 @@ describe("createAnthropicClient", () => {
     const client = createAnthropicClient(fetcher as unknown as typeof fetch);
     const result = await client.validateKey("bad", "claude-sonnet-4-6");
     expect(result.ok).toBe(false);
-    expect(result.error).toMatch(/anthropic 401/);
+    expect(result.error).toMatch(/Claude rejected the API key/i);
   });
 });
 

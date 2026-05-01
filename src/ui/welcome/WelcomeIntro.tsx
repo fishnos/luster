@@ -43,7 +43,7 @@ export function WelcomeIntro({
         transition={{ delay: 0.18, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
         className="flex flex-col items-center gap-4"
       >
-        <Mark size={56} rounded={false} />
+        <Mark size={56} />
         <div className="luster-display text-[28px] leading-none">Luster</div>
       </motion.div>
 

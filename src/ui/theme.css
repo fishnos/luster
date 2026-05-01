@@ -242,47 +242,6 @@
   }
 }
 
-.luster-pulse {
-  animation: luster-pulse 1.6s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-@keyframes luster-pulse {
-  0%,
-  100% {
-    opacity: 0.4;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-.luster-morse {
-  animation: luster-morse 2.4s steps(12, end) infinite;
-}
-
-@keyframes luster-morse {
-  0%,
-  8% {
-    opacity: 1;
-  }
-  10%,
-  18% {
-    opacity: 0.18;
-  }
-  20%,
-  30% {
-    opacity: 1;
-  }
-  32%,
-  46% {
-    opacity: 0.18;
-  }
-  48%,
-  100% {
-    opacity: 0.18;
-  }
-}
-
 .luster-thinking-bar {
   background-image: linear-gradient(
     90deg,
@@ -622,58 +581,30 @@
   cursor: not-allowed;
 }
 
-.luster-status-pill {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  height: 20px;
-  padding: 0 9px 0 8px;
-  border-radius: 999px;
-  font-family:
-    "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, monospace;
-  font-size: 9.5px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  font-weight: 500;
-  background: rgba(245, 240, 230, 0.05);
-  border: 1px solid rgba(245, 240, 230, 0.14);
-  color: var(--ink-soft);
-  line-height: 20px;
-  white-space: nowrap;
-  vertical-align: middle;
+.luster-status-thinking::after {
+  content: "";
+  display: inline-block;
+  width: 1ch;
+  text-align: left;
+  animation: luster-thinking-dots 1.4s steps(4, end) infinite;
 }
 
-.luster-status-pill[data-tone="ok"] {
-  background: rgba(155, 191, 154, 0.1);
-  border-color: rgba(155, 191, 154, 0.3);
-  color: #c8dcc8;
-}
-
-.luster-status-pill[data-tone="pending"] {
-  background: rgba(245, 240, 230, 0.08);
-  border-color: rgba(245, 240, 230, 0.2);
-  color: var(--ink);
-}
-
-.luster-status-pill[data-tone="error"] {
-  background: rgba(217, 138, 138, 0.12);
-  border-color: rgba(217, 138, 138, 0.34);
-  color: #ecc8c8;
-}
-
-.luster-status-pill[data-tone="warn"] {
-  background: rgba(217, 154, 108, 0.12);
-  border-color: rgba(217, 154, 108, 0.32);
-  color: #e6c69b;
-}
-
-.luster-status-pill > .dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 999px;
-  background: currentColor;
-  flex-shrink: 0;
+@keyframes luster-thinking-dots {
+  0% {
+    content: "";
+  }
+  25% {
+    content: ".";
+  }
+  50% {
+    content: "..";
+  }
+  75% {
+    content: "...";
+  }
+  100% {
+    content: "";
+  }
 }
 
 .luster-ornament {
@@ -696,42 +627,6 @@
   background: var(--rule);
 }
 
-.luster-mode-tab {
-  position: relative;
-  font-family:
-    "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, monospace;
-  font-size: 10px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  font-weight: 500;
-  color: var(--ink-mute);
-  background: transparent;
-  border: none;
-  padding: 8px 10px;
-  cursor: pointer;
-  transition: color 200ms var(--ease-out-soft);
-}
-
-.luster-mode-tab:hover {
-  color: var(--ink-soft);
-}
-
-.luster-mode-tab[data-active="true"] {
-  color: var(--ink);
-}
-
-.luster-mode-tab[data-active="true"]::after {
-  content: "";
-  position: absolute;
-  left: 10px;
-  right: 10px;
-  bottom: 2px;
-  height: 1px;
-  background: currentColor;
-  transform-origin: center;
-  animation: luster-rule-grow 280ms var(--ease-out-soft) both;
-}
-
 .luster-odometer-cell {
   display: inline-block;
   height: 1em;
@@ -748,40 +643,6 @@
 .luster-odometer-digit {
   height: 1em;
   line-height: 1;
-}
-
-.luster-blade-enter {
-  animation: luster-blade-in 360ms var(--ease-blade) both;
-}
-
-.luster-blade-exit {
-  animation: luster-blade-out 280ms var(--ease-blade) both;
-}
-
-@keyframes luster-blade-in {
-  from {
-    opacity: 0;
-    transform: translateX(8px);
-    clip-path: inset(0 100% 0 0);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-    clip-path: inset(0 0 0 0);
-  }
-}
-
-@keyframes luster-blade-out {
-  from {
-    opacity: 1;
-    transform: translateX(0);
-    clip-path: inset(0 0 0 0);
-  }
-  to {
-    opacity: 0;
-    transform: translateX(-6px);
-    clip-path: inset(0 0 0 100%);
-  }
 }
 
 .luster-breath-line {
@@ -809,8 +670,7 @@
 @media (prefers-reduced-motion: reduce) {
   .luster-mount,
   .luster-cross,
-  .luster-pulse,
-  .luster-morse,
+  .luster-status-thinking::after,
   .luster-thinking-bar,
   .luster-rule-draw::after,
   .luster-mark-glyph .spark,
@@ -818,8 +678,6 @@
   .luster-mark-spin,
   .luster-mark-spin .spark,
   .luster-mark-spin .halo,
-  .luster-blade-enter,
-  .luster-blade-exit,
   .luster-breath-line {
     animation: none !important;
   }

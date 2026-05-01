@@ -2,6 +2,9 @@ import type { BackgroundServices } from "@/core/backgroundServices";
 import {
   fail,
   ok,
+  type GoogleAuthRedirectData,
+  type GoogleAuthStatusData,
+  type GoogleDocsFetchData,
   type LusterRequest,
   type LusterResponse,
   type RunEchoRequest,
@@ -9,6 +12,7 @@ import {
   type RunModeResultData,
   type ValidateKeyResultData,
 } from "@/core/messaging";
+import { fetchGoogleDoc } from "@/core/googleDocsApi";
 import type {
   CriticEngineInput,
   CriticEngineResult,
@@ -147,6 +151,72 @@ export function createRequestHandler(
         case "doc-context/set-default-brief":
           await services.docContextStore.setDefaultBrief(request.payload.brief);
           return ok();
+
+        case "gauth/connect": {
+          const result = await services.googleAuth.getToken(
+            request.payload.interactive,
+          );
+          if (result.ok) {
+            return ok<GoogleAuthStatusData>({ connected: true });
+          }
+          return ok<GoogleAuthStatusData>({
+            connected: false,
+            reason: result.reason,
+            error: result.error,
+          });
+        }
+
+        case "gauth/redirect-url": {
+          const info = services.googleAuth.describeClient();
+          return ok<GoogleAuthRedirectData>(info);
+        }
+
+        case "gauth/status": {
+          const result = await services.googleAuth.getToken(false);
+          if (result.ok) {
+            return ok<GoogleAuthStatusData>({ connected: true });
+          }
+          return ok<GoogleAuthStatusData>({
+            connected: false,
+            reason: result.reason === "denied" ? "no-token" : result.reason,
+            error: result.error,
+          });
+        }
+
+        case "gdocs/fetch": {
+          const tokenResult = await services.googleAuth.getToken(false);
+          if (!tokenResult.ok) {
+            const data: GoogleDocsFetchData =
+              tokenResult.reason === "unsupported" ||
+              tokenResult.reason === "not-configured"
+                ? {
+                    ok: false,
+                    reason: "not-configured",
+                    error: tokenResult.error,
+                  }
+                : {
+                    ok: false,
+                    reason: "auth-required",
+                    error: tokenResult.error,
+                  };
+            return ok(data);
+          }
+          let result = await fetchGoogleDoc(
+            request.payload.docId,
+            tokenResult.token,
+          );
+          if (!result.ok && result.reason === "auth-required") {
+            await services.googleAuth.forgetToken(tokenResult.token);
+            const retryToken = await services.googleAuth.getToken(false);
+            if (retryToken.ok) {
+              result = await fetchGoogleDoc(
+                request.payload.docId,
+                retryToken.token,
+              );
+            }
+          }
+          return ok<GoogleDocsFetchData>(result);
+        }
 
         default:
           return fail(

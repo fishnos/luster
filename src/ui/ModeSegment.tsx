@@ -1,17 +1,24 @@
 import type { ModeName } from "@/core/types";
 import type { ModeOverlayInfo } from "@/ui/state";
+import { cn } from "@/ui/cn";
 
 interface TabSpec {
   mode: ModeName;
   label: string;
+  fullName: string;
   numeral: string;
 }
 
 const TABS: TabSpec[] = [
-  { mode: "reading", label: "reading", numeral: "i" },
-  { mode: "interrogation", label: "interrogation", numeral: "ii" },
-  { mode: "critic", label: "critic", numeral: "iii" },
-  { mode: "echo", label: "echo", numeral: "iv" },
+  { mode: "reading", label: "read", fullName: "reading", numeral: "i" },
+  {
+    mode: "interrogation",
+    label: "ask",
+    fullName: "interrogation",
+    numeral: "ii",
+  },
+  { mode: "critic", label: "crit", fullName: "critic", numeral: "iii" },
+  { mode: "echo", label: "echo", fullName: "echo", numeral: "iv" },
 ];
 
 export interface ModeSegmentProps {
@@ -22,12 +29,8 @@ export interface ModeSegmentProps {
 
 export function ModeSegment({ active, onSelect }: ModeSegmentProps) {
   return (
-    <div
-      role="tablist"
-      aria-label="Mode"
-      className="flex items-center justify-between"
-    >
-      {TABS.map(({ mode, label, numeral }) => {
+    <div role="tablist" aria-label="Mode" className="flex items-stretch">
+      {TABS.map(({ mode, label, fullName, numeral }) => {
         const isActive = active === mode;
         return (
           <button
@@ -35,12 +38,17 @@ export function ModeSegment({ active, onSelect }: ModeSegmentProps) {
             type="button"
             role="tab"
             aria-selected={isActive}
+            aria-label={fullName}
             aria-controls={`luster-panel-${mode}`}
-            data-active={isActive}
             onClick={() => onSelect(mode)}
-            className="luster-mode-tab luster-press flex flex-1 flex-col items-center gap-0.5"
+            className={cn(
+              "luster-press flex flex-1 flex-col items-center gap-1 py-1 font-mono text-[10px] uppercase leading-none tracking-[0.16em] transition-colors",
+              isActive
+                ? "text-luster-ink"
+                : "text-luster-faint hover:text-luster-muted",
+            )}
           >
-            <span className="text-[8px] tracking-[0.34em] opacity-60">
+            <span className="text-[9px] tracking-[0.34em] opacity-60">
               {numeral}
             </span>
             <span>{label}</span>

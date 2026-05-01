@@ -30,3 +30,27 @@ export interface ProviderClient {
   call: (args: ProviderCallArgs) => Promise<ProviderCallResult>;
   validateKey: (apiKey: string, model: string) => Promise<ValidateKeyResult>;
 }
+
+export class ProviderRateLimitError extends Error {
+  readonly retryAfterMs: number;
+  readonly provider: ProviderId;
+
+  constructor(provider: ProviderId, message: string, retryAfterMs: number) {
+    super(message);
+    this.name = "ProviderRateLimitError";
+    this.provider = provider;
+    this.retryAfterMs = retryAfterMs;
+  }
+}
+
+export class ProviderAuthError extends Error {
+  readonly provider: ProviderId;
+  readonly status: number;
+
+  constructor(provider: ProviderId, message: string, status: number) {
+    super(message);
+    this.name = "ProviderAuthError";
+    this.provider = provider;
+    this.status = status;
+  }
+}

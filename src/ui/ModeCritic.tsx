@@ -83,7 +83,7 @@ function CriticBody({
           {sentence && <SpanQuote sentence={sentence} issue={issue} />}
           {issue.suggestion && (
             <div className="luster-serif text-[13px] leading-snug text-luster-muted">
-              → {issue.suggestion}
+              {issue.suggestion}
             </div>
           )}
         </li>

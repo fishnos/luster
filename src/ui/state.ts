@@ -2,6 +2,7 @@ import type { ModeName, ModeOutput, ProviderId } from "@/core/types";
 import type { DocStats } from "@/core/stats";
 import type { DocContext } from "@/core/docContext";
 import { EMPTY_DOC_CONTEXT } from "@/core/docContext";
+import type { AdapterAuthState } from "@/adapters/types";
 
 export type ModeStatus = "idle" | "pending" | "ok" | "error" | "rate-limited";
 
@@ -52,6 +53,7 @@ export interface OverlayState {
   docContext: DocContext;
   autoModeStatus: AutoModeStatus;
   fullText: string;
+  adapterAuth: AdapterAuthState;
 }
 
 export type HostKind = "unknown" | "google-docs" | "notion" | "prosemirror";
@@ -89,6 +91,7 @@ export function createInitialOverlayState(): OverlayState {
       lastSwitchAt: null,
     },
     fullText: "",
+    adapterAuth: { kind: "not-required" },
   };
 }
 
@@ -125,6 +128,11 @@ export interface OverlayController {
   setAutoMode: (autoMode: boolean) => void;
   setAutoModeStatus: (status: AutoModeStatus) => void;
   setActiveModeFromAuto: (mode: ModeName, reason: AutoModeReason) => void;
+  setAdapterAuth: (state: AdapterAuthState) => void;
+  setAdapterAuthRequester: (
+    requester: ((interactive: boolean) => Promise<AdapterAuthState>) | null,
+  ) => void;
+  requestAdapterAuth: (interactive: boolean) => Promise<AdapterAuthState>;
   resetMode: (mode: ModeName) => void;
   reset: () => void;
 }
@@ -132,6 +140,9 @@ export interface OverlayController {
 export function createOverlayController(): OverlayController {
   let state = createInitialOverlayState();
   const listeners = new Set<() => void>();
+  let authRequester:
+    | ((interactive: boolean) => Promise<AdapterAuthState>)
+    | null = null;
 
   function notify(): void {
     for (const listener of listeners) listener();
@@ -347,6 +358,21 @@ export function createOverlayController(): OverlayController {
         };
       });
     },
+    setAdapterAuth(adapterAuth) {
+      update((current) => ({ ...current, adapterAuth }));
+    },
+
+    setAdapterAuthRequester(requester) {
+      authRequester = requester;
+    },
+
+    async requestAdapterAuth(interactive) {
+      if (!authRequester) {
+        return state.adapterAuth;
+      }
+      return authRequester(interactive);
+    },
+
     resetMode(mode) {
       withMode(mode, () => ({ ...INITIAL_MODE_INFO }));
     },

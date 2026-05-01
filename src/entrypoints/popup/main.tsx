@@ -41,7 +41,27 @@ function Popup() {
   const [welcomeSeen, setWelcomeSeen] = useState<boolean | null>(null);
 
   useEffect(() => {
-    void firstRun.hasSeenWelcome().then(setWelcomeSeen);
+    let cancelled = false;
+    void (async () => {
+      const seen = await firstRun.hasSeenWelcome();
+      if (cancelled) return;
+      if (seen) {
+        setWelcomeSeen(true);
+        return;
+      }
+      const providersWithKey = await keyVault.listProvidersWithKey();
+      if (cancelled) return;
+      if (providersWithKey.length > 0) {
+        await firstRun.markWelcomeSeen();
+        if (cancelled) return;
+        setWelcomeSeen(true);
+        return;
+      }
+      setWelcomeSeen(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   async function completeWelcome(): Promise<void> {
@@ -109,7 +129,7 @@ function MainView() {
       className="flex flex-col gap-7 px-6 py-7"
     >
       <motion.div variants={blurFadeIn} className="flex items-center gap-3">
-        <Mark size={26} rounded={false} />
+        <Mark size={26} />
         <span className="luster-display text-[18px] leading-none">Luster</span>
       </motion.div>
 

@@ -20,7 +20,7 @@ function Options() {
             variants={blurFadeIn}
             className="mb-10 flex items-center gap-3"
           >
-            <Mark size={28} rounded={false} />
+            <Mark size={28} />
             <h1 className="luster-display text-[22px] leading-none">Luster</h1>
           </motion.header>
 

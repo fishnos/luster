@@ -5,6 +5,10 @@ import type {
   ProviderClient,
   ValidateKeyResult,
 } from "@/core/providers/types";
+import {
+  describeUnknownError,
+  throwProviderHttpError,
+} from "@/core/providers/errors";
 
 const API_URL = "https://api.anthropic.com/v1/messages";
 const API_VERSION = "2023-06-01";
@@ -58,7 +62,7 @@ export function createAnthropicClient(
       });
 
       if (!response.ok) {
-        throw new Error(await readErrorText(response, "anthropic"));
+        await throwProviderHttpError("anthropic", response);
       }
 
       const json = (await response.json()) as AnthropicResponse;
@@ -93,15 +97,19 @@ export function createAnthropicClient(
           }),
         });
         if (!response.ok) {
-          return {
-            ok: false,
-            error: await readErrorText(response, "anthropic"),
-          };
+          try {
+            await throwProviderHttpError("anthropic", response);
+          } catch (error) {
+            return {
+              ok: false,
+              error: describeUnknownError("anthropic", error),
+            };
+          }
         }
         const json = (await response.json()) as AnthropicResponse;
         return { ok: true, modelEcho: json.model };
       } catch (error) {
-        return { ok: false, error: errorMessage(error) };
+        return { ok: false, error: describeUnknownError("anthropic", error) };
       }
     },
   };
@@ -124,24 +132,4 @@ function extractText(response: AnthropicResponse): string {
     .filter((block) => block.type === "text" && typeof block.text === "string")
     .map((block) => block.text!)
     .join("");
-}
-
-async function readErrorText(
-  response: Response,
-  providerLabel: string,
-): Promise<string> {
-  const status = `${response.status} ${response.statusText || ""}`.trim();
-  try {
-    const body = await response.text();
-    return body
-      ? `${providerLabel} ${status}: ${body}`
-      : `${providerLabel} ${status}`;
-  } catch {
-    return `${providerLabel} ${status}`;
-  }
-}
-
-function errorMessage(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  return String(error);
 }

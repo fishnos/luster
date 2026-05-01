@@ -12,7 +12,7 @@ import { ModeInterrogation } from "@/ui/ModeInterrogation";
 import { ModeCritic } from "@/ui/ModeCritic";
 import { ModeEcho } from "@/ui/ModeEcho";
 import { ModeSegment } from "@/ui/ModeSegment";
-import { sendRunEchoScan } from "@/core/sendRequest";
+import { sendGoogleAuthRedirect, sendRunEchoScan } from "@/core/sendRequest";
 import { StatsPanel } from "@/ui/StatsPanel";
 import { DocContextRow } from "@/ui/DocContextRow";
 import { ConnectBanner } from "@/ui/ConnectBanner";
@@ -207,16 +207,13 @@ function Header({
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
-      className="relative flex h-12 cursor-grab items-center gap-2.5 px-4 active:cursor-grabbing"
+      className="relative flex h-12 cursor-grab items-center gap-3 px-4 active:cursor-grabbing"
     >
-      <Mark size={22} rounded={false} spin />
-      <span className="luster-display translate-y-[1px] text-[18px] leading-none">
-        Luster
-      </span>
-      <StatusDot
-        status={state.modes[state.activeMode].status}
-        className="ml-1"
-      />
+      <Mark size={20} spin />
+      <div className="flex items-baseline gap-2.5">
+        <span className="luster-display text-[19px] leading-none">luster</span>
+        <StatusDot status={state.modes[state.activeMode]?.status ?? "idle"} />
+      </div>
 
       <div className="ml-auto flex items-center gap-1">
         <Button
@@ -274,6 +271,33 @@ function MainView({
                 controller.setConnectState("connected", provider);
               }}
             />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence initial={false}>
+        {state.adapterAuth.kind === "needs-auth" && (
+          <motion.div
+            key="gauth"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={SECTION_TRANSITION}
+            style={{ overflow: "hidden" }}
+          >
+            <GoogleAuthBanner controller={controller} state={state} />
+          </motion.div>
+        )}
+        {state.adapterAuth.kind === "not-configured" && (
+          <motion.div
+            key="gauth-cfg"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={SECTION_TRANSITION}
+            style={{ overflow: "hidden" }}
+          >
+            <GoogleAuthNotConfigured error={state.adapterAuth.error} />
           </motion.div>
         )}
       </AnimatePresence>
@@ -465,7 +489,7 @@ function MinimizedInner({
   controller: OverlayController;
   state: OverlayState;
 }) {
-  const status = state.modes[state.activeMode].status;
+  const status = state.modes[state.activeMode]?.status ?? "idle";
   const wordCount = state.stats?.words ?? 0;
 
   const dragOriginRef = useRef<{
@@ -555,19 +579,89 @@ function MinimizedInner({
       <Mark size={16} />
       <Odometer
         value={wordCount}
-        className="luster-num text-[12px] font-medium leading-none text-luster-ink"
+        className={cn(
+          "luster-num text-[12px] font-medium leading-none transition-colors",
+          status === "pending" && "text-luster-ember",
+          status === "error" && "text-luster-err",
+          status === "rate-limited" && "text-luster-warn",
+          status === "ok" && "text-luster-ok",
+          status === "idle" && "text-luster-ink",
+        )}
       />
-      {status !== "idle" && (
-        <span
-          className={cn(
-            "inline-block h-1.5 w-1.5 shrink-0 rounded-full",
-            status === "pending" && "bg-luster-accent luster-pulse",
-            status === "error" && "bg-luster-err",
-            status === "rate-limited" && "bg-luster-warn",
-            status === "ok" && "bg-luster-ok",
-          )}
-        />
-      )}
     </motion.button>
+  );
+}
+
+function GoogleAuthBanner({
+  controller,
+  state,
+}: {
+  controller: OverlayController;
+  state: OverlayState;
+}) {
+  const [pending, setPending] = useState(false);
+  const [showSetup, setShowSetup] = useState(false);
+  const [redirectInfo, setRedirectInfo] = useState<{
+    redirectUrl: string | null;
+    clientId: string | null;
+  } | null>(null);
+  const isDenied =
+    state.adapterAuth.kind === "needs-auth" &&
+    state.adapterAuth.reason === "denied";
+
+  useEffect(() => {
+    if (showSetup && !redirectInfo) {
+      void sendGoogleAuthRedirect().then(setRedirectInfo);
+    }
+  }, [showSetup, redirectInfo]);
+
+  return (
+    <div className="space-y-2 rounded-md bg-luster-subtle/40 p-3">
+      <div className="luster-eyebrow">Connect Google Docs</div>
+      <p className="text-[12px] leading-snug text-luster-muted">
+        Luster reads your draft through Google's Docs API to keep word count and
+        editorial feedback in sync. Read-only — your text never leaves your
+        device.
+      </p>
+      {isDenied && (
+        <p className="text-[11px] leading-snug text-luster-warn">
+          Authorization was declined. Click connect to try again.
+        </p>
+      )}
+      <div className="flex items-center gap-3 pt-1">
+        <button
+          type="button"
+          disabled={pending}
+          onClick={async () => {
+            setPending(true);
+            await controller.requestAdapterAuth(true);
+            setPending(false);
+          }}
+          className="luster-btn-primary"
+        >
+          {pending ? "Connecting…" : "Connect"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function GoogleAuthNotConfigured({ error }: { error?: string }) {
+  return (
+    <div className="space-y-2 rounded-md border border-luster-border-strong/50 bg-luster-subtle/40 p-3">
+      <div className="luster-eyebrow text-luster-warn">
+        Google API not set up
+      </div>
+      <p className="text-[12px] leading-snug text-luster-muted">
+        Luster needs an OAuth client ID for Google Docs. Set
+        <code className="luster-mono mx-1 rounded bg-luster-ink/10 px-1 py-0.5 text-[11px]">
+          WXT_GOOGLE_OAUTH_CLIENT_ID
+        </code>
+        and rebuild.
+      </p>
+      {error && (
+        <p className="text-[11px] leading-snug text-luster-faint">{error}</p>
+      )}
+    </div>
   );
 }

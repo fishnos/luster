@@ -5,6 +5,10 @@ import type {
   ProviderClient,
   ValidateKeyResult,
 } from "@/core/providers/types";
+import {
+  describeUnknownError,
+  throwProviderHttpError,
+} from "@/core/providers/errors";
 
 const API_URL = "https://api.openai.com/v1/chat/completions";
 
@@ -36,7 +40,7 @@ export function createOpenAIClient(fetcher: Fetcher = fetch): ProviderClient {
       });
 
       if (!response.ok) {
-        throw new Error(await readErrorText(response, "openai"));
+        await throwProviderHttpError("openai", response);
       }
 
       const json = (await response.json()) as OpenAIResponse;
@@ -66,12 +70,16 @@ export function createOpenAIClient(fetcher: Fetcher = fetch): ProviderClient {
           }),
         });
         if (!response.ok) {
-          return { ok: false, error: await readErrorText(response, "openai") };
+          try {
+            await throwProviderHttpError("openai", response);
+          } catch (error) {
+            return { ok: false, error: describeUnknownError("openai", error) };
+          }
         }
         const json = (await response.json()) as OpenAIResponse;
         return { ok: true, modelEcho: json.model };
       } catch (error) {
-        return { ok: false, error: errorMessage(error) };
+        return { ok: false, error: describeUnknownError("openai", error) };
       }
     },
   };
@@ -81,24 +89,4 @@ interface OpenAIResponse {
   model?: string;
   choices?: { message?: { content?: string } }[];
   usage?: { prompt_tokens?: number; completion_tokens?: number };
-}
-
-async function readErrorText(
-  response: Response,
-  providerLabel: string,
-): Promise<string> {
-  const status = `${response.status} ${response.statusText || ""}`.trim();
-  try {
-    const body = await response.text();
-    return body
-      ? `${providerLabel} ${status}: ${body}`
-      : `${providerLabel} ${status}`;
-  } catch {
-    return `${providerLabel} ${status}`;
-  }
-}
-
-function errorMessage(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  return String(error);
 }

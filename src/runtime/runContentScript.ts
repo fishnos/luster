@@ -2,7 +2,6 @@ import type { ContentScriptContext } from "wxt/utils/content-script-context";
 import type { Adapter, AdapterId } from "@/adapters/types";
 import { mountOverlay } from "@/ui/mountOverlay";
 import { bootstrapAdapter } from "@/runtime/bootstrapAdapter";
-import { onBridgeState } from "@/adapters/google-docs";
 import type { HostKind } from "@/ui/state";
 
 const POLL_INTERVAL_MS = 500;
@@ -25,17 +24,6 @@ export async function runContentScript(
   overlayMount.controller.setHostKind(HOST_KIND[adapter.id]);
 
   let detachAdapter: (() => void) | null = null;
-
-  const unsubscribeBridgeState =
-    adapter.id === "google-docs"
-      ? onBridgeState((state) => {
-          if (state === "unsupported") {
-            overlayMount.controller.setEditorSearchStuck(true);
-          } else if (state === "attached") {
-            overlayMount.controller.setEditorSearchStuck(false);
-          }
-        })
-      : () => {};
 
   function tryAttach(): boolean {
     if (detachAdapter) return true;
@@ -88,7 +76,6 @@ export async function runContentScript(
     observer.disconnect();
     window.clearInterval(intervalId);
     window.clearTimeout(stuckTimer);
-    unsubscribeBridgeState();
     detachAdapter?.();
     overlayMount.destroy();
   });

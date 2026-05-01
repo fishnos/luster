@@ -1,4 +1,7 @@
 import type {
+  GoogleAuthRedirectData,
+  GoogleAuthStatusData,
+  GoogleDocsFetchData,
   LusterRequest,
   LusterResponse,
   RunModeRequest,
@@ -113,4 +116,52 @@ export async function sendRunEchoScan(args: {
     return { ok: false, reason: "provider-error", error: response.error };
   }
   return response.data as RunModeResultData;
+}
+
+export async function sendGoogleAuthConnect(
+  interactive: boolean,
+): Promise<GoogleAuthStatusData> {
+  const response = await sendRequest({
+    type: "gauth/connect",
+    payload: { interactive },
+  });
+  if (!response.ok) {
+    return { connected: false, reason: "error", error: response.error };
+  }
+  return response.data as GoogleAuthStatusData;
+}
+
+export async function sendGoogleAuthStatus(): Promise<GoogleAuthStatusData> {
+  const response = await sendRequest({
+    type: "gauth/status",
+    payload: {},
+  });
+  if (!response.ok) {
+    return { connected: false, reason: "error", error: response.error };
+  }
+  return response.data as GoogleAuthStatusData;
+}
+
+export async function sendGoogleAuthRedirect(): Promise<GoogleAuthRedirectData> {
+  const response = await sendRequest({
+    type: "gauth/redirect-url",
+    payload: {},
+  });
+  if (!response.ok) {
+    return { redirectUrl: null, clientId: null };
+  }
+  return response.data as GoogleAuthRedirectData;
+}
+
+export async function sendGoogleDocsFetch(
+  docId: string,
+): Promise<GoogleDocsFetchData> {
+  const response = await sendRequest({
+    type: "gdocs/fetch",
+    payload: { docId },
+  });
+  if (!response.ok) {
+    return { ok: false, reason: "error", error: response.error };
+  }
+  return response.data as GoogleDocsFetchData;
 }

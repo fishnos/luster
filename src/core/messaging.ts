@@ -150,6 +150,59 @@ export interface SetDefaultBriefRequest {
   payload: { brief: string };
 }
 
+export interface GoogleAuthConnectRequest {
+  type: "gauth/connect";
+  payload: { interactive: boolean };
+}
+
+export interface GoogleAuthStatusRequest {
+  type: "gauth/status";
+  payload: Record<string, never>;
+}
+
+export interface GoogleDocsFetchRequest {
+  type: "gdocs/fetch";
+  payload: { docId: string };
+}
+
+export interface GoogleAuthRedirectRequest {
+  type: "gauth/redirect-url";
+  payload: Record<string, never>;
+}
+
+export interface GoogleAuthRedirectData {
+  redirectUrl: string | null;
+  clientId: string | null;
+}
+
+export type GoogleAuthStatusData =
+  | { connected: true }
+  | {
+      connected: false;
+      reason:
+        | "not-configured"
+        | "denied"
+        | "unsupported"
+        | "error"
+        | "no-token";
+      error?: string;
+    };
+
+export type GoogleDocsFetchData =
+  | { ok: true; fullText: string; paragraphs: string[]; revisionId?: string }
+  | {
+      ok: false;
+      reason:
+        | "auth-required"
+        | "permission-denied"
+        | "not-found"
+        | "rate-limited"
+        | "error"
+        | "not-configured";
+      status?: number;
+      error?: string;
+    };
+
 export type LusterRequest =
   | RunModeRequest
   | RunEchoRequest
@@ -169,7 +222,11 @@ export type LusterRequest =
   | SetDocContextPactRequest
   | SetDocContextAutoModeRequest
   | GetDefaultBriefRequest
-  | SetDefaultBriefRequest;
+  | SetDefaultBriefRequest
+  | GoogleAuthConnectRequest
+  | GoogleAuthStatusRequest
+  | GoogleDocsFetchRequest
+  | GoogleAuthRedirectRequest;
 
 export interface OkResponse<TData = undefined> {
   ok: true;

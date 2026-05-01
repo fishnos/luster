@@ -2,19 +2,19 @@ import { cn } from "@/ui/cn";
 import type { ModeStatus } from "@/ui/state";
 
 const STATUS_LABEL: Record<ModeStatus, string> = {
-  idle: "Idle",
-  pending: "Thinking",
-  ok: "Ready",
-  error: "Error",
-  "rate-limited": "Paused",
+  idle: "idle",
+  pending: "thinking",
+  ok: "ready",
+  error: "error",
+  "rate-limited": "paused",
 };
 
 const STATUS_TONE: Record<ModeStatus, string> = {
-  idle: "neutral",
-  pending: "pending",
-  ok: "ok",
-  error: "error",
-  "rate-limited": "warn",
+  idle: "text-luster-faint",
+  pending: "text-luster-ink",
+  ok: "text-luster-ok",
+  error: "text-luster-err",
+  "rate-limited": "text-luster-warn",
 };
 
 export interface StatusDotProps {
@@ -27,16 +27,13 @@ export function StatusDot({ status, className }: StatusDotProps) {
     <span
       role="status"
       aria-label={STATUS_LABEL[status]}
-      data-tone={STATUS_TONE[status]}
-      className={cn("luster-status-pill", className)}
+      className={cn(
+        "luster-eyebrow leading-none",
+        STATUS_TONE[status],
+        status === "pending" && "luster-status-thinking",
+        className,
+      )}
     >
-      <span
-        className={cn(
-          "dot",
-          status === "pending" && "luster-pulse",
-          status === "ok" && "luster-morse",
-        )}
-      />
       {STATUS_LABEL[status]}
     </span>
   );

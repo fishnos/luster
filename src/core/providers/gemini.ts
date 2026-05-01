@@ -5,6 +5,10 @@ import type {
   ProviderClient,
   ValidateKeyResult,
 } from "@/core/providers/types";
+import {
+  describeUnknownError,
+  throwProviderHttpError,
+} from "@/core/providers/errors";
 
 const API_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 
@@ -34,7 +38,7 @@ export function createGeminiClient(fetcher: Fetcher = fetch): ProviderClient {
       });
 
       if (!response.ok) {
-        throw new Error(await readErrorText(response, "gemini"));
+        await throwProviderHttpError("gemini", response);
       }
 
       const json = (await response.json()) as GeminiResponse;
@@ -61,11 +65,15 @@ export function createGeminiClient(fetcher: Fetcher = fetch): ProviderClient {
           }),
         });
         if (!response.ok) {
-          return { ok: false, error: await readErrorText(response, "gemini") };
+          try {
+            await throwProviderHttpError("gemini", response);
+          } catch (error) {
+            return { ok: false, error: describeUnknownError("gemini", error) };
+          }
         }
         return { ok: true, modelEcho: model };
       } catch (error) {
-        return { ok: false, error: errorMessage(error) };
+        return { ok: false, error: describeUnknownError("gemini", error) };
       }
     },
   };
@@ -82,24 +90,4 @@ function extractText(response: GeminiResponse): string {
     .map((part) => part.text ?? "")
     .filter((text) => text.length > 0)
     .join("");
-}
-
-async function readErrorText(
-  response: Response,
-  providerLabel: string,
-): Promise<string> {
-  const status = `${response.status} ${response.statusText || ""}`.trim();
-  try {
-    const body = await response.text();
-    return body
-      ? `${providerLabel} ${status}: ${body}`
-      : `${providerLabel} ${status}`;
-  } catch {
-    return `${providerLabel} ${status}`;
-  }
-}
-
-function errorMessage(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  return String(error);
 }
